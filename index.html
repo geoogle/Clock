@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Photos Library - Gallery Setup</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #121212;
+            --accent-color: #007aff;
+            --text-color: #ffffff;
+            --text-secondary: #8e8e93;
+            --border-color: #2c2c2e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Interactive Preview Canvas Area */
+        .preview-viewport {
+            width: 100%;
+            aspect-ratio: 9 / 16;
+            background-color: #050505;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 1px dashed #444;
+            touch-action: none; /* Prevents default browser scrolling during pinch/pan */
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bg-image {
+            position: absolute;
+            pointer-events: none;
+            max-width: none;
+            max-height: none;
+            object-fit: contain;
+            /* Ensures natural aspect ratio constraints */
+        }
+
+        .time-overlay {
+            position: absolute;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0px 2px 8px rgba(0,0,0,0.5);
+            font-variant-numeric: tabular-nums;
+            /* Lock scaling point structurally */
+            transform-origin: center center; 
+            z-index: 10;
+        }
+
+        /* Controls styling */
+        .control-group {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .control-label {
+            color: var(--text-secondary);
+        }
+
+        .btn-upload {
+            display: block;
+            width: 100%;
+            background-color: #2c2c2e;
+            color: var(--text-color);
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            margin-bottom: 12px;
+            transition: background 0.2s;
+        }
+
+        .btn-upload:active {
+            background-color: #3a3a3c;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-primary:active {
+            opacity: 0.9;
+        }
+
+        .status-badge {
+            background: #1c1c1e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Gallery Setup Menu</h1>
+        <p>Manage your custom alignment coordinates and digital media assets.</p>
+    </header>
+
+    <!-- Visual Layout Configuration Card -->
+    <div class="card">
+        <div class="card-title">
+            <span>◖</span> Adjust Preview Position
+        </div>
+
+        <label class="btn-upload">
+            Choose Background Photo
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+
+        <!-- Viewport Workspace -->
+        <div class="preview-viewport" id="viewport">
+            <div class="canvas-container" id="canvasContainer">
+                <img id="bgImage" class="bg-image" style="display: none;" alt="Preview Target">
+                <div id="timeOverlay" class="time-overlay">00:00</div>
+            </div>
+        </div>
+
+        <!-- Metric Details Panel -->
+        <div class="control-group">
+            <div class="control-row">
+                <span class="control-label">Position X (%):</span>
+                <span id="valX">50</span>
+            </div>
+            <div class="control-row">
+                <span class="control-label">Position Y (%):</span>
+                <span id="valY">50</span>
+            </div>
+            <div class="control-row">
+                <span class="control-label">Scale Factor:</span>
+                <span id="valScale">1.00</span>
+            </div>
+        </div>
+
+        <button class="btn-primary" id="saveAlignmentBtn">
+            ✔ Save Alignment
+        </button>
+    </div>
+
+    <!-- Random Media Catalog Card -->
+    <div class="card">
+        <div class="card-title">Core Gimmick Asset</div>
+        <div class="control-row">
+            <span>Slot 1: Target Clock Photo Canvas</span>
+            <span class="status-badge" id="assetStatus">Empty</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State Values
+    let scale = 1.0;
+    let panX = 0;
+    let panY = 0;
+    
+    // UI Layout Configuration Coordinates
+    let timePosX = 50; // default percent
+    let timePosY = 20; // default top area percent
+    let fontSizing = 65; // absolute scale sizing baseline
+    
+    // Tracking Variables for Gestures
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialPanX = 0;
+    let initialPanY = 0;
+    let startDistance = 0;
+    let initialScale = 1.0;
+
+    // Elements References
+    const viewport = document.getElementById('viewport');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const bgImage = document.getElementById('bgImage');
+    const timeOverlay = document.getElementById('timeOverlay');
+    const imageInput = document.getElementById('imageInput');
+    const saveAlignmentBtn = document.getElementById('saveAlignmentBtn');
+    
+    const valX = document.getElementById('valX');
+    const valY = document.getElementById('valY');
+    const valScale = document.getElementById('valScale');
+    const assetStatus = document.getElementById('assetStatus');
+
+    // Handle Image Loading Integration
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                bgImage.src = event.target.result;
+                bgImage.style.display = 'block';
+                assetStatus.innerText = "Loaded";
+                
+                // Reset structural variables safely on a new image
+                scale = 1.0;
+                panX = 0;
+                panY = 0;
+                
+                bgImage.onload = function() {
+                    // Fit completely without clipping the head area natively initially
+                    const vWidth = viewport.clientWidth;
+                    const vHeight = viewport.clientHeight;
+                    const imgRatio = bgImage.naturalWidth / bgImage.naturalHeight;
+                    const viewRatio = vWidth / vHeight;
+
+                    if (imgRatio > viewRatio) {
+                        bgImage.style.width = '100%';
+                        bgImage.style.height = 'auto';
+                    } else {
+                        bgImage.style.height = '100%';
+                        bgImage.style.width = 'auto';
+                    }
+                    updateTransform();
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Universal Component Transform Renderer Matrix
+    function updateTransform() {
+        // Enforce boundaries safely via CSS transform parameters 
+        // Transforms the parent container space seamlessly so background + time scale perfectly in sync
+        canvasContainer.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        
+        // Render Text elements cleanly inside the locked frame setup
+        timeOverlay.style.left = `${timePosX}%`;
+        timeOverlay.style.top = `${timePosY}%`;
+        timeOverlay.style.transform = `translate(-50%, -50%)`;
+        timeOverlay.style.fontSize = `${fontSizing}px`;
+
+        // Update real-time matrix layout feedback numbers to the dashboard interface
+        const rect = viewport.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        // Calculate dynamic relative displacement values cleanly
+        const computedX = Math.round(50 + (panX / rect.width) * 100);
+        const computedY = Math.round(50 + (panY / rect.height) * 100);
+
+        valX.innerText = computedX;
+        valY.innerText = computedY;
+        valScale.innerText = scale.toFixed(2);
+    }
+
+    // Touch Event Gestures Interaction Engine
+    viewport.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+            // Setup Single Finger Pan Triggers
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            initialPanX = panX;
+            initialPanY = panY;
+        } else if (e.touches.length === 2) {
+            // Setup Dual Finger Pinch Scale Triggers
+            isDragging = false; 
+            startDistance = getDistance(e.touches[0], e.touches[1]);
+            initialScale = scale;
+            
+            // Re-anchor original coordinates offsets mid-operation dynamically
+            startX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            startY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            initialPanX = panX;
+            initialPanY = panY;
+        }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', function(e) {
+        if (isDragging && e.touches.length === 1) {
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+            panX = initialPanX + deltaX;
+            panY = initialPanY + deltaY;
+            updateTransform();
+        } else if (e.touches.length === 2) {
+            const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            if (startDistance > 0) {
+                // Compute new proportional scale safely
+                const targetScale = initialScale * (currentDistance / startDistance);
+                // Clamp boundaries cleanly to prevent breaking asset viewport boundaries
+                scale = Math.max(0.3, Math.min(targetScale, 5.0));
+                
+                // Track spatial updates continuously across runtime
+                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                
+                panX = initialPanX + (currentMidX - startX);
+                panY = initialPanY + (currentMidY - startY);
+                
+                updateTransform();
+            }
+        }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', function(e) {
+        if (e.touches.length === 0) {
+            isDragging = false;
+        } else if (e.touches.length === 1) {
+            // Smoothly shift control logic mapping states down to primary finger tracking state 
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            initialPanX = panX;
+            initialPanY = panY;
+        }
+    }, { passive: true });
+
+    // Mathematical Distance Helper Vector Utility
+    function getDistance(t1, t2) {
+        return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    }
+
+    // Save Data Execution Handlers
+    saveAlignmentBtn.addEventListener('click', function() {
+        const finalCoordinates = {
+            x_offset_pct: valX.innerText,
+            y_offset_pct: valY.innerText,
+            scale_factor: valScale.innerText,
+            time_display: timeOverlay.innerText
+        };
+        
+        alert(`✔ Alignment Saved Successfully!\nCoordinates Captured:\nX: ${finalCoordinates.x_offset_pct}%\nY: ${finalCoordinates.y_offset_pct}%\nScale: ${finalCoordinates.scale_factor}`);
+        console.log("Configuration Asset Vector Out:", finalCoordinates);
+    });
+
+    // Initialize Default State Parameters immediately on boot execution
+    updateTransform();
+</script>
+
+</body>
+</html>

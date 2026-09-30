@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Library</title>
+    
+    <!-- FULL-SCREEN PWA LOGIC: Blocks the browser URL bar from displaying -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Photos">
+    <link rel="apple-touch-icon" href="app-icon.png">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body, html { width: 100%; height: 100%; background-color: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        
+        /* Native App Top Navbar Shell */
+        .gallery-header { padding: 50px 20px 10px 20px; background: #000; border-bottom: 0.5px solid #1c1c1e; }
+        .gallery-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 15px; }
+        
+        /* Album Folders */
+        .album-tabs { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .album-tabs::-webkit-scrollbar { display: none; }
+        .tab { padding: 8px 16px; background: #1c1c1e; border-radius: 20px; font-size: 0.9rem; font-weight: 600; color: #8e8e93; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .tab.active { background: #fff; color: #000; }
+
+        /* Media Grid Layout */
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; width: 100%; height: calc(100% - 150px); overflow-y: auto; align-content: start; }
+        .thumbnail { aspect-ratio: 1; width: 100%; background-position: center; background-size: cover; cursor: pointer; position: relative; }
+        
+        /* Lightbox Fullscreen Viewer */
+        .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 10; justify-content: center; align-items: center; }
+        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        /* DYNAMIC REAL-TIME DIGITAL TEXT OVERLAY */
+        .clock-overlay {
+            position: absolute;
+            top: 50%; /* TUNING: Shift percentages around until numbers rest perfectly over your clock template face */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.6rem;
+            font-weight: bold;
+            color: #1a1a1a; 
+            font-family: monospace; 
+            letter-spacing: 2px;
+            opacity: 0.9;
+            mix-blend-mode: multiply; /* Fuses the text beneath photographic reflections */
+            display: none;
+        }
+
+        /* Hidden Setup Menu Screen */
+        .admin-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,15,15,0.98); z-index: 20; padding: 30px; overflow-y: auto; }
+        .admin-panel h2 { font-weight: 400; margin-bottom: 5px; color: #007aff; }
+        .admin-panel p { font-size: 0.85rem; color: #8e8e93; margin-bottom: 25px; }
+        .btn { display: inline-block; background: #007aff; color: #fff; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 25px; border: none; width: 100%; text-align: center; }
+        .section-title { font-size: 1rem; font-weight: 600; color: #fff; margin: 20px 0 10px 0; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
+        .slot { background: #1c1c1e; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <!-- Native App Top Navigation Bar -->
+    <div class="gallery-header">
+        <div class="gallery-title">Library</div>
+        <div class="album-tabs" id="albumTabs">
+            <div class="tab active" onclick="switchAlbum('recents')">Recents</div>
+            <div class="tab" onclick="switchAlbum('camera')">Camera</div>
+            <div class="tab" onclick="switchAlbum('downloads')">Downloads</div>
+            <div class="tab" onclick="switchAlbum('whatsapp')">WhatsApp</div>
+        </div>
+    </div>
+
+    <!-- Active Media Grid Container -->
+    <div class="gallery-grid" id="galleryGrid"></div>
+
+    <!-- Fullscreen Presentation Lightbox Viewer -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightboxImg" src="" alt="Viewer">
+        <div id="clockText" class="clock-overlay"></div>
+    </div>
+
+    <!-- Hidden Two-Finger Multi-Touch Config Menu -->
+    <div class="admin-panel" id="adminPanel">
+        <h2>Gallery Setup Menu</h2>
+        <p>Load your persistent assets here. Slot 1 holds the blank clock target image.</p>
+        
+        <div class="section-title">Core Gimmick Asset</div>
+        <div class="slot">
+            <span>Slot 1: Blank Clock Photo Target</span>
+            <input type="file" id="gimmickInput" accept="image/*" onchange="loadLocalImage(this, 'gimmick')">
+        </div>
+        
+        <div class="section-title">Camera Album Fillers</div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'camera', 0)"></div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'camera', 1)"></div>
+        
+        <div class="section-title">Downloads Album Fillers</div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'downloads', 0)"></div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'downloads', 1)"></div>
+        
+        <div class="section-title">WhatsApp Album Fillers</div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'whatsapp', 0)"></div>
+        <div class="slot"><input type="file" accept="image/*" onchange="loadLocalImage(this, 'whatsapp', 1)"></div>
+        
+        <button class="btn" onclick="toggleAdminMenu()">Save & Lock Gallery</button>
+    </div>
+
+    <script>
+        let currentTab = 'recents';
+        let activeRevealedTime = "";
+
+        // Fallback default stock mockup grids until you upload your files in the admin panel
+        let db = {
+            gimmick: { id: 'gimmick', src: 'clock-template.jpg' },
+            camera: [{src:'https://picsum.photos/400?random=11'}, {src:'https://picsum.photos/400?random=12'}],
+            downloads: [{src:'https://picsum.photos/400?random=21'}, {src:'https://picsum.photos/400?random=22'}],
+            whatsapp: [{src:'https://picsum.photos/400?random=31'}, {src:'https://picsum.photos/400?random=32'}]
+        };
+
+        if(localStorage.getItem('mentalism_gallery_db')) {
+            db = JSON.parse(localStorage.getItem('mentalism_gallery_db'));
+        }
+
+        function switchAlbum(albumKey) {
+            currentTab = albumKey;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '';
+            let displayList = [];
+
+            if (currentTab === 'recents') {
+                displayList = [db.gimmick, ...db.camera, ...db.downloads, ...db.whatsapp];
+                // AUTOMATIC TRIGGERS: Force clock to Index Position 0 if time is received
+                if (activeRevealedTime !== "") {
+                    displayList = displayList.filter(item => item.id !== 'gimmick');
+                    displayList.unshift(db.gimmick);
+                }
+            } else if (currentTab === 'camera') {
+                displayList = [db.gimmick, ...db.camera];
+            } else {
+                displayList = db[currentTab] || [];
+            }
+
+            displayList.forEach((imgData) => {
+                if(!imgData || !imgData.src) return;
+                const thumb = document.createElement('div');
+                thumb.className = 'thumbnail';
+                thumb.style.backgroundImage = `url('${imgData.src}')`;
+                thumb.onclick = () => openLightbox(imgData);
+                grid.appendChild(thumb);
+            });
+        }
+
+        function openLightbox(imgData) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightboxImg');
+            const clockText = document.getElementById('clockText');
+
+            lightboxImg.src = imgData.src;
+            lightbox.style.display = 'flex';
+
+            if (imgData.id === 'gimmick' && activeRevealedTime !== "") {
+                clockText.innerText = activeRevealedTime;
+                clockText.style.display = 'block';
+            } else {
+                clockText.style.display = 'none';
+            }
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+        }
+
+        // Two-Finger Multi-Touch Gesture Detector
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) { toggleAdminMenu(); }
+        });
+
+        function toggleAdminMenu() {
+            const panel = document.getElementById('adminPanel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // FIXED: Now reads target file indexes safely from browser binary lists
+        function loadLocalImage(input, targetKey, index = null) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (index === null) {
+                        db[targetKey].src = e.target.result;
+                    } else {
+                        db[targetKey][index] = { src: e.target.result };
+                    }
+                    localStorage.setItem('mentalism_gallery_db', JSON.stringify(db));
+                    renderGrid();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // The URL Parameter Extractor (Invisible Door)
+        function parseTransmission() {
+            const params = new URLSearchParams(window.location.search);
+            let timeVal = params.get('t'); 
+            
+            if (timeVal) {
+                // Auto formats raw text (e.g., "610" -> "06:10")
+                if (timeVal.length === 3) timeVal = "0" + timeVal;
+                if (timeVal.length === 4 && !timeVal.includes(':')) {
+                    timeVal = timeVal.substring(0, 2) + ':' + timeVal.substring(2);
+                }
+                activeRevealedTime = timeVal;
+                renderGrid();
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        window.onload = () => {
+            renderGrid();
+            parseTransmission();
+        };
+    </script>
+</body>
+</html>

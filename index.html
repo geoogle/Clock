@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Photos Library</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --accent-color: #007aff;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Passcode Section */
+        .passcode-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        .passcode-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+            width: 240px;
+        }
+        .passcode-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #1c1c1e;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+        }
+        .passcode-btn span {
+            font-size: 10px;
+            color: #8e8e93;
+        }
+
+        /* Library Navigation */
+        .library-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            width: 100%;
+            padding-bottom: 5px;
+        }
+        .nav-item {
+            background-color: #1c1c1e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* Core Viewer & Live Canvas Area */
+        .viewer-panel {
+            width: 100%;
+            max-width: 360px;
+            height: 640px;
+            border: 2px solid #333;
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            background-color: #111;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Background Image Canvas Element */
+        #bgCanvasImage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center;
+            max-width: none;
+            max-height: none;
+            width: auto;
+            height: 100%;
+            pointer-events: auto;
+            cursor: move;
+            transition: none;
+        }
+
+        /* Live Clock Draggable Layer */
+        #clockContainer {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            color: #ffffff;
+            text-align: center;
+            cursor: move;
+            user-select: none;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 80%;
+            transform-origin: center center;
+        }
+
+        #clockTime {
+            font-size: 64px;
+            font-weight: 200;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            text-shadow: 0px 2px 10px rgba(0,0,0,0.5);
+        }
+
+        #clockDate {
+            font-size: 16px;
+            font-weight: 400;
+            margin-top: 5px;
+            text-shadow: 0px 1px 5px rgba(0,0,0,0.5);
+        }
+
+        /* Control Form Panel */
+        .control-panel {
+            background-color: #1c1c1e;
+            border-radius: 14px;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 14px;
+            color: #8e8e93;
+            margin-bottom: 5px;
+        }
+
+        .control-group input[type="range"],
+        .control-group input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            background: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .btn-action {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-action:disabled {
+            background-color: #3a3a3c;
+            color: #8e8e93;
+            cursor: not-allowed;
+        }
+
+        /* Lock state styling overlay */
+        .is-locked #bgCanvasImage,
+        .is-locked #clockContainer {
+            cursor: default !important;
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Passcode Area (Preserved Feature) -->
+        <div class="passcode-section">
+            <h3>Enter Passcode</h3>
+            <div class="passcode-grid">
+                <button class="passcode-btn">1</button>
+                <button class="passcode-btn">2 <span>ABC</span></button>
+                <button class="passcode-btn">3 <span>DEF</span></button>
+                <button class="passcode-btn">4 <span>GHI</span></button>
+                <button class="passcode-btn">5 <span>JKL</span></button>
+                <button class="passcode-btn">6 <span>MNO</span></button>
+                <button class="passcode-btn">7 <span>PQRS</span></button>
+                <button class="passcode-btn">8 <span>TUV</span></button>
+                <button class="passcode-btn">9 <span>WXYZ</span></button>
+                <button class="passcode-btn" style="grid-column: 2">0</button>
+                <button class="passcode-btn" style="font-size: 14px">Delete</button>
+            </div>
+        </div>
+
+        <!-- Library Shortcuts -->
+        <div class="library-nav">
+            <span class="nav-item">Recents</span>
+            <span class="nav-item">Camera</span>
+            <span class="nav-item">Downloads</span>
+            <span class="nav-item">WhatsApp</span>
+        </div>
+
+        <!-- Live Layout Portal Workspace -->
+        <div class="viewer-panel" id="viewerPortal">
+            <!-- Background Image Layer -->
+            <img id="bgCanvasImage" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='800' viewBox='0 0 400 800'><rect width='400' height='800' fill='%232c2c2e'/><circle cx='200' cy='250' r='80' fill='%23555'/><text x='50%'' y='50%'' dominant-baseline='middle'' text-anchor='middle'' fill='%23aaa'' font-size='16'>Demo Subject / Head Area Placeholder</text></svg>" alt="Canvas Base">
+            
+            <!-- Draggable Time Details Box Container -->
+            <div id="clockContainer">
+                <div id="clockTime">12:00</div>
+                <div id="clockDate">Wednesday, September 30</div>
+            </div>
+        </div>
+
+        <!-- Dynamic Control Calibration Form (Scaling and Position Settings) -->
+        <div class="control-panel">
+            <h3>Calibration Template</h3>
+            
+            <div class="control-group">
+                <label>Adjust Image Scale (Fixes 'Head Area Only' issue):</label>
+                <input type="range" id="inputImageScale" min="0.2" max="3" step="0.05" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label>Clock Alignment Position X (%):</label>
+                <input type="number" id="inputClockX" value="50">
+            </div>
+
+            <div class="control-group">
+                <label>Clock Alignment Position Y (%):</label>
+                <input type="number" id="inputClockY" value="15">
+            </div>
+
+            <div class="control-group">
+                <label>Clock Font Sizing:</label>
+                <input type="range" id="inputClockSize" min="20" max="100" value="64">
+            </div>
+
+            <div class="control-group">
+                <label>Clock Rotation (Skew):</label>
+                <input type="range" id="inputClockSkew" min="-180" max="180" value="0">
+            </div>
+
+            <!-- Image Upload Interaction Canvas Trigger -->
+            <div class="control-group">
+                <label>Upload Background Photo Canvas (Slot 1):</label>
+                <input type="file" id="imageUploader" accept="image/*">
+            </div>
+
+            <button type="button" class="btn-action" id="btnSaveAlignment">&#10004; Save Alignment</button>
+        </div>
+
+        <!-- Gallery Setup Menu Meta Info -->
+        <div class="control-panel" style="margin-top: 10px;">
+            <h3>Gallery Setup Menu</h3>
+            <p style="font-size: 13px; color: #8e8e93;">Manage your custom alignment coordinates and digital media assets.</p>
+            <p style="font-size: 13px; color: #8e8e93;">Programmed Time: 12:00 Lock Screen Portal</p>
+            <button class="btn-action" style="background-color: #34c759;" onclick="alert('Configuration state locked safely. Future adjustments disabled!')">Save & Lock Gallery</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Handles
+        const bgImage = document.getElementById('bgCanvasImage');
+        const clockContainer = document.getElementById('clockContainer');
+        const clockTime = document.getElementById('clockTime');
+        const viewerPortal = document.getElementById('viewerPortal');
+        
+        // Settings form fields
+        const inputImageScale = document.getElementById('inputImageScale');
+        const inputClockX = document.getElementById('inputClockX');
+        const inputClockY = document.getElementById('inputClockY');
+        const inputClockSize = document.getElementById('inputClockSize');
+        const inputClockSkew = document.getElementById('inputClockSkew');
+        const btnSaveAlignment = document.getElementById('btnSaveAlignment');
+        const imageUploader = document.getElementById('imageUploader');
+
+        // Internal State Engine Coordinates
+        let state = {
+            isLocked: false,
+            imgScale: 1.0,
+            imgX: 0,
+            imgY: 0,
+            clockX: 50, // default %
+            clockY: 15, // default %
+            clockSize: 64,
+            clockRotation: 0
+        };
+
+        // Initialize state engine values from local history parameters if present
+        function initLayoutEngine() {
+            const historyCache = localStorage.getItem('gallery_layout_alignment_cache');
+            if (historyCache) {
+                state = JSON.parse(historyCache);
+                applyLayoutState();
+                
+                // If saved, force freeze inputs to honor user design instructions
+                if (state.isLocked) {
+                    lockDownConfigurations();
+                }
+            }
+        }
+
+        function applyLayoutState() {
+            // Apply scale + manual offset positions safely to image canvas context
+            bgImage.style.transform = `translate(calc(-50% + ${state.imgX}px), calc(-50% + ${state.imgY}px)) scale(${state.imgScale})`;
+            
+            // Set clock alignments
+            clockContainer.style.left = `${state.clockX}%`;
+            clockContainer.style.top = `${state.clockY}%`;
+            clockTime.style.fontSize = `${state.clockSize}px`;
+            clockContainer.style.transform = `translate(-50%, -50%) rotate(${state.clockRotation}deg)`;
+
+            // Sync structural parameters with UI form input items
+            inputImageScale.value = state.imgScale;
+            inputClockX.value = Math.round(state.clockX);
+            inputClockY.value = Math.round(state.clockY);
+            inputClockSize.value = state.clockSize;
+            inputClockSkew.value = state.clockRotation;
+        }
+
+        function lockDownConfigurations() {
+            state.isLocked = true;
+            viewerPortal.classList.add('is-locked');
+            
+            // Turn off control widgets completely to freeze adjustments in the future
+            const targetInputs = [inputImageScale, inputClockX, inputClockY, inputClockSize, inputClockSkew, btnSaveAlignment, imageUploader];
+            targetInputs.forEach(input => {
+                if(input) input.disabled = true;
+            });
+            btnSaveAlignment.innerText = "🔒 Alignment Saved & Hard Locked";
+        }
+
+        // --- Dragging Logic Setup Engine (Supports standard background image dragging and clock item tracking) ---
+        function setupDraggableTrack(element, type) {
+            let activeDrag = false;
+            let startX, startY;
+
+            const dragStart = (e) => {
+                if (state.isLocked) return;
+                activeDrag = true;
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                
+                startX = clientX;
+                startY = clientY;
+                
+                e.preventDefault();
+            };
+
+            const dragMove = (e) => {
+                if (!activeDrag || state.isLocked) return;
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                
+                const deltaX = clientX - startX;
+                const deltaY = clientY - startY;
+                
+                startX = clientX;
+                startY = clientY;
+
+                if (type === 'bgImage') {
+                    state.imgX += deltaX;
+                    state.imgY += deltaY;
+                } else if (type === 'clock') {
+                    // Convert movement shifts to bounding viewport percentages
+                    const portalWidth = viewerPortal.clientWidth;
+                    const portalHeight = viewerPortal.clientHeight;
+                    state.clockX += (deltaX / portalWidth) * 100;
+                    state.clockY += (deltaY / portalHeight) * 100;
+                }
+                
+                applyLayoutState();
+            };
+
+            const dragEnd = () => { activeDrag = false; };
+
+            element.addEventListener('mousedown', dragStart);
+            window.addEventListener('mousemove', dragMove);
+            window.addEventListener('mouseup', dragEnd);
+
+            element.addEventListener('touchstart', dragStart, { passive: false });
+            window.addEventListener('touchmove', dragMove, { passive: false });
+            window.addEventListener('touchend', dragEnd);
+        }
+
+        // Initialize drag interaction listeners securely
+        setupDraggableTrack(bgImage, 'bgImage');
+        setupDraggableTrack(clockContainer, 'clock');
+
+        // --- Change Configuration Triggers ---
+        inputImageScale.addEventListener('input', (e) => {
+            state.imgScale = parseFloat(e.target.value);
+            applyLayoutState();
+        });
+        inputClockSize.addEventListener('input', (e) => {
+            state.clockSize = parseInt(e.target.value);
+            applyLayoutState();
+        });
+        inputClockSkew.addEventListener('input', (e) => {
+            state.clockRotation = parseInt(e.target.value);
+            applyLayoutState();
+        });
+        inputClockX.addEventListener('input', (e) => {
+            state.clockX = parseFloat(e.target.value) || 0;
+            applyLayoutState();
+        });
+        inputClockY.addEventListener('input', (e) => {
+            state.clockY = parseFloat(e.target.value) || 0;
+            applyLayoutState();
+        });
+
+        // Safe Custom Canvas Image File Loader Event
+        imageUploader.addEventListener('change', (e) => {
+            const activeFile = e.target.files[0];
+            if (activeFile) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    bgImage.src = event.target.result;
+                    // Reset positions cleanly when swapping background template assets
+                    state.imgX = 0;
+                    state.imgY = 0;
+                    applyLayoutState();
+                };
+                reader.readAsDataURL(activeFile);
+            }
+        });
+
+        // --- Permanent Lock Save Functionality ---
+        btnSaveAlignment.addEventListener('click', () => {
+            if (confirm("Are you sure you want to save this alignment layout configuration? This will permanently save the alignment and completely lock down future repositioning capabilities.")) {
+                lockDownConfigurations();
+                localStorage.setItem('gallery_layout_alignment_cache', JSON.stringify(state));
+            }
+        });
+
+        // Boot system application engine
+        initLayoutEngine();
+    </script>
+</body>
+</html>

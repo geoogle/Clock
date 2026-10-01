@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Photos</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --ios-bg: #000000;
+      --ios-text: #ffffff;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: var(--ios-bg);
+      color: var(--ios-text);
+      overflow: hidden;
+    }
+    
+    /* Top Real-time Device Status Bar */
+    .status-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      pointer-events: none;
+      background: transparent;
+    }
+    .status-bar .right-icons {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .battery-icon {
+      width: 25px;
+      height: 12px;
+      border: 1px solid #ffffff;
+      border-radius: 3px;
+      position: relative;
+      padding: 1px;
+    }
+    .battery-level {
+      height: 100%;
+      background-color: #ffffff;
+      width: 100%;
+      border-radius: 1px;
+    }
+    .battery-icon::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: 3px;
+      width: 2px;
+      height: 4px;
+      background-color: #ffffff;
+      border-radius: 0 1px 1px 0;
+    }
+
+    /* Passcode Screen */
+    #passcode-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      transition: opacity 0.3s ease;
+    }
+    .passcode-header {
+      font-size: 20px;
+      margin-bottom: 30px;
+      font-weight: 400;
+    }
+    .dots-container {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 60px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border: 1px solid #fff;
+      border-radius: 50%;
+    }
+    .dot.filled {
+      background: #fff;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 75px);
+      gap: 20px 25px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .key {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: #1c1c1e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      cursor: pointer;
+      active-background: #3a3a3c;
+    }
+    .key:active {
+      background: #3a3a3c;
+    }
+    .key span {
+      font-size: 10px;
+      color: #8e8e93;
+      margin-top: -2px;
+    }
+    .keypad-footer {
+      width: 275px;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 15px;
+      padding: 0 10px;
+    }
+    .footer-btn {
+      cursor: pointer;
+    }
+
+    /* Main App Interface */
+    #main-app {
+      display: none;
+      width: 100%;
+      height: 100%;
+      padding-top: 44px;
+      background: #000;
+      flex-direction: column;
+    }
+    .app-header {
+      padding: 15px 20px;
+      font-size: 34px;
+      font-weight: 700;
+      border-bottom: 1px solid #1c1c1e;
+    }
+    .album-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .album-card {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .album-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #1c1c1e;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8e8e93;
+      font-size: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .album-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .album-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .album-count {
+      font-size: 12px;
+      color: #8e8e93;
+    }
+
+    /* Control Deck (Hidden setup UI toggled from bottom bar / alignment deck triggers) */
+    #control-deck {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #121212;
+      z-index: 600;
+      display: none;
+      flex-direction: column;
+      padding: 50px 20px 20px 20px;
+      overflow-y: auto;
+    }
+    .deck-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #ffcc00;
+    }
+    .deck-credit {
+      font-size: 12px;
+      color: #8e8e93;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #2c2c2e;
+      padding-bottom: 10px;
+    }
+    .section-label {
+      font-size: 14px;
+      color: #aeaeae;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .btn {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-secondary {
+      background: #2c2c2e;
+    }
+    .slider-group {
+      margin: 15px 0;
+    }
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .slider-group input {
+      width: 100%;
+    }
+    
+    /* Workspace Canvas View (The revelation overlay) */
+    #workspace-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 400;
+      display: none;
+    }
+    #gimmick-display-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    #time-revelation-text {
+      position: absolute;
+      color: #ffffff;
+      font-weight: bold;
+      pointer-events: none;
+      transform-origin: center;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Live Status Bar -->
+  <div class="status-bar">
+    <div id="status-time">00:00</div>
+    <div class="right-icons">
+      <span>📶</span>
+      <span>🛜</span>
+      <div class="battery-icon">
+        <div id="status-battery" class="battery-level"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Passcode Screen -->
+  <div id="passcode-screen">
+    <div class="passcode-header">Enter Passcode</div>
+    <div class="dots-container">
+      <div class="dot" id="dot-0"></div>
+      <div class="dot" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+      <div class="dot" id="dot-3"></div>
+    </div>
+    <div class="keypad">
+      <div class="key" onclick="pressKey('1')">1</div>
+      <div class="key" onclick="pressKey('2')">2<span>A B C</span></div>
+      <div class="key" onclick="pressKey('3')">3<span>D E F</span></div>
+      <div class="key" onclick="pressKey('4')">4<span>G H I</span></div>
+      <div class="key" onclick="pressKey('5')">5<span>J K L</span></div>
+      <div class="key" onclick="pressKey('6')">6<span>M N O</span></div>
+      <div class="key" onclick="pressKey('7')">7<span>P Q R S</span></div>
+      <div class="key" onclick="pressKey('8')">8<span>T U V</span></div>
+      <div class="key" onclick="pressKey('9')">9<span>W X Y Z</span></div>
+      <div></div>
+      <div class="key" onclick="pressKey('0')">0</div>
+      <div></div>
+    </div>
+    <div class="keypad-footer">
+      <div class="footer-btn">Forgot Password?</div>
+      <div class="footer-btn" onclick="pressDelete()">Delete</div>
+    </div>
+  </div>
+
+  <!-- Main App Gallery Interface -->
+  <div id="main-app">
+    <div class="app-header">Library</div>
+    <div class="album-grid">
+      <div class="album-card" onclick="launchWorkspace()">
+        <div class="album-thumb" id="thumb-recents">🖼️</div>
+        <div class="album-name">Recents</div>
+        <div class="album-count" id="count-recents">0</div>
+      </div>
+      <div class="album-card" onclick="launchWorkspace()">
+        <div class="album-thumb" id="thumb-camera">📷</div>
+        <div class="album-name">Camera</div>
+        <div class="album-count" id="count-camera">0</div>
+      </div>
+      <div class="album-card" onclick="launchWorkspace()">
+        <div class="album-thumb" id="thumb-whatsapp">💬</div>
+        <div class="album-name">WhatsApp</div>
+        <div class="album-count" id="count-whatsapp">0</div>
+      </div>
+      <div class="album-card" onclick="openControlDeck()">
+        <div class="album-thumb">⚙️</div>
+        <div class="album-name">System Deck</div>
+        <div class="album-count">View</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tuning Control Deck (Hidden Menu) -->
+  <div id="control-deck">
+    <div class="deck-title">Tuning Control Deck</div>
+    <div class="deck-credit">Thanks and Regards by Mentalist Jagath</div>
+    
+    <div class="section-label">1. Configure Target Reveal Photo</div>
+    <input type="file" id="target-photo-input" accept="image/*" style="margin-bottom:10px;">
+    
+    <div class="section-label">2. Bulk Gallery Filler Photos</div>
+    <input type="file" id="filler-photos-input" accept="image/*" multiple style="margin-bottom:10px;">
+    <div id="loaded-count-label" style="font-size:13px; color:#8e8e93;">Loaded: 0 Photos</div>
+
+    <div class="section-label">3. Fine-tune Font Size, Rotation & Coordinates</div>
+    <div class="slider-group">
+      <label>Font Size (<span id="val-size">45</span>px)</label>
+      <input type="range" id="slider-size" min="10" max="150" value="45" oninput="updateAlignmentPreview()">
+    </div>
+    <div class="slider-group">
+      <label>Rotation (<span id="val-rot">0</span>°)</label>
+      <input type="range" id="slider-rot" min="-180" max="180" value="0" oninput="updateAlignmentPreview()">
+    </div>
+    <div class="slider-group">
+      <label>Horizontal Offset X (<span id="val-x">50</span>%)</label>
+      <input type="range" id="slider-x" min="0" max="100" value="50" oninput="updateAlignmentPreview()">
+    </div>
+    <div class="slider-group">
+      <label>Vertical Offset Y (<span id="val-y">50</span>%)</label>
+      <input type="range" id="slider-y" min="0" max="100" value="50" oninput="updateAlignmentPreview()">
+    </div>
+
+    <button class="btn" onclick="saveSettingsPermanently()">Save Settings & Photos</button>
+    <button class="btn btn-secondary" onclick="closeControlDeck()">Close Setup Deck</button>
+  </div>
+
+  <!-- Workspace Canvas -->
+  <div id="workspace-canvas" onclick="exitWorkspace()">
+    <img id="gimmick-display-img" src="" alt="Target Display">
+    <div id="time-revelation-text">00:00</div>
+  </div>
+
+  <script>
+    let currentPasscode = "";
+    let targetPhotoData = "";
+    let fillerPhotosCount = 0;
+    
+    // Configuration values initialized from LocalStorage if available
+    let config = {
+      size: 45,
+      rot: 0,
+      x: 50,
+      y: 50,
+      targetPhoto: "",
+      fillerCount: 0
+    };
+
+    // Keep real-time device battery and timestamp continuously updated
+    function updateRealTimeStatus() {
+      const now = new Date();
+      let hours = now.getHours().toString().padStart(2, '0');
+      let minutes = now.getMinutes().toString().padStart(2, '0');
+      document.getElementById('status-time').innerText = `${hours}:${minutes}`;
+
+      if (navigator.getBattery) {
+        navigator.getBattery().then(battery => {
+          document.getElementById('status-battery').style.width = (battery.level * 100) + "%";
+        });
+      } else {
+        document.getElementById('status-battery').style.width = "85%"; // fallback
+      }
+    }
+    setInterval(updateRealTimeStatus, 1000);
+    updateRealTimeStatus();
+
+    // Load permanently saved assets and configurations on initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      const storedConfig = localStorage.getItem('mentalist_config');
+      if (storedConfig) {
+        config = JSON.parse(storedConfig);
+        // Apply slider visual elements
+        document.getElementById('slider-size').value = config.size;
+        document.getElementById('slider-rot').value = config.rot;
+        document.getElementById('slider-x').value = config.x;
+        document.getElementById('slider-y').value = config.y;
+        
+        document.getElementById('val-size').innerText = config.size;
+        document.getElementById('val-rot').innerText = config.rot;
+        document.getElementById('val-x').innerText = config.x;
+        document.getElementById('val-y').innerText = config.y;
+        
+        targetPhotoData = config.targetPhoto;
+        fillerPhotosCount = config.fillerCount;
+
+        updateGalleryUI();
+      }
+    });
+
+    function updateGalleryUI() {
+      document.getElementById('loaded-count-label').innerText = `Loaded: ${fillerPhotosCount} Photos`;
+      document.getElementById('count-recents').innerText = fillerPhotosCount;
+      document.getElementById('count-camera').innerText = Math.max(0, fillerPhotosCount - 2);
+      document.getElementById('count-whatsapp').innerText = Math.max(0, fillerPhotosCount - 5);
+      
+      if (targetPhotoData) {
+        document.getElementById('thumb-recents').innerHTML = `<img src="${targetPhotoData}">`;
+        document.getElementById('thumb-camera').innerHTML = `<img src="${targetPhotoData}">`;
+      }
+    }
+
+    // Keypad Logic
+    function pressKey(num) {
+      if (currentPasscode.length < 4) {
+        currentPasscode += num;
+        document.getElementById(`dot-${currentPasscode.length - 1}`).classList.add('filled');
+        
+        if (currentPasscode.length === 4) {
+          setTimeout(processPasscodeTrigger, 250);
+        }
+      }
+    }
+
+    function pressDelete() {
+      if (currentPasscode.length > 0) {
+        document.getElementById(`dot-${currentPasscode.length - 1}`).classList.remove('filled');
+        currentPasscode = currentPasscode.slice(0, -1);
+      }
+    }
+
+    // Process passcode trigger securely mapping the entered digits directly as the alignment target hours/minutes
+    function processPasscodeTrigger() {
+      // Split digits: first two digits are hours, last two digits are minutes
+      let targetHours = currentPasscode.substring(0, 2);
+      let targetMinutes = currentPasscode.substring(2, 4);
+
+      // Final dynamic mismatch validation fix: Ensure it translates seamlessly to standard HH:MM layout
+      let dynamicRevelationTime = `${targetHours}:${targetMinutes}`;
+      
+      // Update revelation text element instantly
+      const revText = document.getElementById('time-revelation-text');
+      revText.innerText = dynamicRevelationTime;
+
+      // Reset Passcode dot displays
+      currentPasscode = "";
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`dot-${i}`).classList.remove('filled');
+      }
+
+      // Hide lock screen and open revelation canvas directly
+      document.getElementById('passcode-screen').style.opacity = 0;
+      setTimeout(() => {
+        document.getElementById('passcode-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'flex';
+        // Auto forward straight into the secret workspace view
+        launchWorkspace();
+      }, 300);
+    }
+
+    // Workspace & Canvas Alignment View
+    function launchWorkspace() {
+      const canvas = document.getElementById('workspace-canvas');
+      const img = document.getElementById('gimmick-display-img');
+      
+      if (targetPhotoData) {
+        img.src = targetPhotoData;
+      } else {
+        img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'><rect fill='%23111' width='100%25' height='100%25'/></svg>";
+      }
+
+      applyTextStyles();
+      canvas.style.display = 'block';
+    }
+
+    function exitWorkspace() {
+      document.getElementById('workspace-canvas').style.display = 'none';
+      document.getElementById('passcode-screen').style.display = 'flex';
+      document.getElementById('passcode-screen').style.opacity = 1;
+      document.getElementById('main-app').style.display = 'none';
+    }
+
+    function applyTextStyles() {
+      const revText = document.getElementById('time-revelation-text');
+      revText.style.fontSize = `${config.size}px`;
+      revText.style.transform = `translate(-50%, -50%) rotate(${config.rot}deg)`;
+      revText.style.left = `${config.x}%`;
+      revText.style.top = `${config.y}%`;
+    }
+
+    // Hidden menu deck navigation handlers
+    function openControlDeck() {
+      document.getElementById('control-deck').style.display = 'flex';
+    }
+
+    function closeControlDeck() {
+      document.getElementById('control-deck').style.display = 'none';
+      exitWorkspace();
+    }
+
+    function updateAlignmentPreview() {
+      config.size = document.getElementById('slider-size').value;
+      config.rot = document.getElementById('slider-rot').value;
+      config.x = document.getElementById('slider-x').value;
+      config.y = document.getElementById('slider-y').value;
+
+      document.getElementById('val-size').innerText = config.size;
+      document.getElementById('val-rot').innerText = config.rot;
+      document.getElementById('val-x').innerText = config.x;
+      document.getElementById('val-y').innerText = config.y;
+    }
+
+    // Read media inputs and bundle into storage model
+    const targetInput = document.getElementById('target-photo-input');
+    targetInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          targetPhotoData = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    const fillerInput = document.getElementById('filler-photos-input');
+    fillerInput.addEventListener('change', (e) => {
+      fillerPhotosCount = e.target.files.length;
+      document.getElementById('loaded-count-label').innerText = `Loaded: ${fillerPhotosCount} Photos`;
+    });
+
+    // Save configuration and photos permanently into LocalStorage
+    function saveSettingsPermanently() {
+      config.targetPhoto = targetPhotoData;
+      config.fillerCount = fillerPhotosCount;
+      localStorage.setItem('mentalist_config', JSON.stringify(config));
+      updateGalleryUI();
+      alert("Settings and photos saved permanently!");
+    }
+  </script>
+</body>
+</html>

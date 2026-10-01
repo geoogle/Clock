@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Library</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      width: 100vw;
+      height: 100vh;
+    }
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: none;
+      overflow: hidden;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* 1. UNIVERSAL FULL-SCREEN RESPONSIVE VERTICAL KEYPAD CENTERING */
+    #lockScreen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: #000;
+      z-index: 100;
+    }
+    .lock-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .lock-header h2 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 15px;
+    }
+    .dots-container {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      height: 15px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border: 1px solid #fff;
+      border-radius: 50%;
+      transition: background-color 0.15s ease;
+    }
+    .dot.filled {
+      background-color: #fff;
+    }
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px 25px;
+      margin-bottom: 40px;
+    }
+    .key-btn {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 32px;
+      font-weight: 400;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background 0.1s ease;
+    }
+    .key-btn:active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+    .key-btn span.abc {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-top: -2px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .lock-footer {
+      width: 280px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+      color: #fff;
+      padding: 0 10px;
+    }
+    .footer-link {
+      cursor: pointer;
+      color: #fff;
+      text-decoration: none;
+      background: none;
+      border: none;
+      font-size: 15px;
+    }
+
+    /* 3. BASE64 IMAGE STORAGE AND GAPLESS MATRIX PREVIEWS */
+    #libraryScreen {
+      flex-direction: column;
+      background: #000;
+      z-index: 10;
+    }
+    .gallery-header {
+      padding: 15px;
+      font-size: 24px;
+      font-weight: 700;
+      border-bottom: 1px solid #222;
+      background: #000;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      width: 100vw;
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    .gallery-grid img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      display: block;
+      cursor: pointer;
+      background: #111;
+    }
+
+    /* PERFORMANCE VIEWPORTS */
+    #performanceScreen {
+      background: #000;
+      z-index: 20;
+    }
+    .performance-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #performanceImage {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    
+    /* 4. PERFECT AXIS ALIGNMENT FOR THE CLOCK TEXT (FIXED CENTER ORIGIN) */
+    #clockText {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
+      color: #fff;
+      font-weight: bold;
+      white-space: nowrap;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* TUNING CONTROL DECK WORKSPACE */
+    #tuningDeck {
+      flex-direction: column;
+      background: #111;
+      z-index: 200;
+      padding: 20px;
+    }
+    .tuning-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .tuning-header h3 {
+      font-size: 18px;
+    }
+    .watermark-text {
+      display: none; /* Completely invisible to spectators */
+    }
+    .tuning-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+    }
+    .workspace-canvas {
+      position: relative;
+      width: 100%;
+      height: 260px;
+      background: #000;
+      border: 1px dashed #444;
+      overflow: hidden;
+    }
+    #workspaceImage {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      position: absolute;
+    }
+    #workspaceClock {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
+      color: #fff;
+      font-weight: bold;
+      cursor: move;
+      white-space: nowrap;
+      border: 1px dashed rgba(255,255,255,0.4);
+      padding: 2px 6px;
+      line-height: 1;
+    }
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-row label {
+      font-size: 13px;
+      color: #aaa;
+    }
+    .control-row input[type="range"] {
+      width: 100%;
+      accent-color: #007aff;
+    }
+    .upload-box {
+      border: 2px dashed #333;
+      padding: 15px;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #1a1a1a;
+    }
+    .upload-box input {
+      display: none;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: #007aff; color: #fff; }
+    .btn-secondary { background: #333; color: #fff; }
+
+    /* HARDWARE BACK TRAP OVERLAY SYSTEM */
+    .toast-container {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(40, 40, 40, 0.9);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 500;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .toast-container.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOCK SCREEN -->
+  <div id="lockScreen" class="screen active">
+    <div class="lock-header">
+      <h2>Enter Passcode</h2>
+      <div class="dots-container">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+    <div class="keypad-grid">
+      <button class="key-btn" data-val="1">1<span class="abc">&nbsp;</span></button>
+      <button class="key-btn" data-val="2">2<span class="abc">A B C</span></button>
+      <button class="key-btn" data-val="3">3<span class="abc">D E F</span></button>
+      <button class="key-btn" data-val="4">4<span class="abc">G H I</span></button>
+      <button class="key-btn" data-val="5">5<span class="abc">J K L</span></button>
+      <button class="key-btn" data-val="6">6<span class="abc">M N O</span></button>
+      <button class="key-btn" data-val="7">7<span class="abc">P Q R S</span></button>
+      <button class="key-btn" data-val="8">8<span class="abc">T U V</span></button>
+      <button class="key-btn" data-val="9">9<span class="abc">W X Y Z</span></button>
+      <div style="width:75px; height:75px;"></div>
+      <button class="key-btn" data-val="0">0<span class="abc">&nbsp;</span></button>
+      <div style="width:75px; height:75px;"></div>
+    </div>
+    <div class="lock-footer">
+      <button class="footer-link" id="forgotBtn">Forgot Password?</button>
+      <button class="footer-link" id="deleteBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- GALLERY SCREEN (CORRECTED MATCHED NAMING CONVENTION ID) -->
+  <div id="libraryScreen" class="screen">
+    <div class="gallery-header">Library</div>
+    <div class="gallery-grid" id="gridContainer"></div>
+  </div>
+
+  <!-- PERFORMANCE SCREEN -->
+  <div id="performanceScreen" class="screen">
+    <div class="performance-container" id="perfContainer">
+      <img id="performanceImage" src="" alt="Performance Backdrop">
+      <div id="clockText">00:00</div>
+    </div>
+  </div>
+
+  <!-- TUNING CONTROL DECK PANEL WORKSPACE -->
+  <div id="tuningDeck" class="screen">
+    <div class="tuning-header">
+      <!-- 7. ISOLATED CREDITS WATERMARK -->
+      <h3>Tuning Controls <span class="watermark-text">Thanks and regards by mentalist jagath</span></h3>
+      <button class="footer-link" id="closeTuning" style="color:#007aff; font-weight:600;">Done</button>
+    </div>
+    <div class="tuning-body">
+      <div class="workspace-canvas" id="canvasFrame">
+        <img id="workspaceImage" src="" alt="Tuning Preview Background">
+        <div id="workspaceClock">00:00</div>
+      </div>
+      
+      <div class="control-row">
+        <label>Font Size (<span id="lblSize">32</span>px)</label>
+        <input type="range" id="sliderSize" min="16" max="72" value="32">
+      </div>
+      <div class="control-row">
+        <label>Rotation (<span id="lblRot">0</span>°)</label>
+        <input type="range" id="sliderRot" min="-180" max="180" value="0">
+      </div>
+      <div class="control-row">
+        <label>Background Scale (<span id="lblScale">1.0</span>)</label>
+        <input type="range" id="sliderScale" min="0.5" max="3.0" step="0.1" value="1.0">
+      </div>
+      <div class="control-row">
+        <label>Background Y Shift (<span id="lblBgY">0</span>px)</label>
+        <input type="range" id="sliderBgY" min="-200" max="200" value="0">
+      </div>
+
+      <div class="upload-box" onclick="document.getElementById('fileGimmick').click()">
+        <span>Upload Gimmick Target Photo</span>
+        <input type="file" id="fileGimmick" accept="image/*">
+      </div>
+
+      <div class="upload-box" onclick="document.getElementById('fileFillers').click()">
+        <span>Upload Bulk Filler Photos (Multi)</span>
+        <input type="file" id="fileFillers" accept="image/*" multiple>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="btnResetData">Reset Storage</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastAlert">Press back again to exit</div>
+
+  <script>
+    // BASE TRICK STATE CONTEXT STRUCTURES
+    let db = {
+      gimmick: "",
+      fillers: []
+    };
+
+    let matrixConfig = {
+      clockX: 50, // Saved strictly as center-origin width percentages
+      clockY: 50, // Saved strictly as center-origin height percentages
+      fontSize: 32,
+      rotation: 0,
+      bgScale: 1.0,
+      bgY: 0
+    };
+
+    // 5. POINTER MAP MECHANICS FOR GESTURE TRIGGER
+    let activePointersMap = new Map();
+    let gestureStartY = 0;
+    let isGestureValid = false;
+
+    let passcodeBuffer = "";
+    let formattedTimeStr = "00:00";
+    let backButtonTapCount = 0;
+    let backButtonTimeout = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      renderGalleryGrid();
+      applyPerformanceMatrix();
+      setupHistoryStates();
+      initPointerEvents();
+      attachDOMEventListeners();
+    });
+
+    // 3. STORAGE SYNC LOGIC VIA FILEREADER DATA URLS
+    function loadStateFromStorage() {
+      try {
+        const storedDb = localStorage.getItem('mentalism_db');
+        const storedMatrix = localStorage.getItem('mentalism_matrix');
+        
+        if (storedDb) db = JSON.parse(storedDb);
+        if (storedMatrix) matrixConfig = JSON.parse(storedMatrix);
+
+        if (!db.fillers || db.fillers.length === 0) {
+          db.fillers = [];
+          for(let i=0; i<20; i++) {
+            db.fillers.push("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%231a1a1a'/></svg>");
+          }
+        }
+        if (!db.gimmick) {
+          db.gimmick = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>";
+        }
+      } catch (e) {
+        console.error("Storage load recovery mismatch", e);
+      }
+    }
+
+    function saveStateToStorage() {
+      localStorage.setItem('mentalism_db', JSON.stringify(db));
+      localStorage.setItem('mentalism_matrix', JSON.stringify(matrixConfig));
+    }
+
+    function renderGalleryGrid() {
+      const container = document.getElementById('gridContainer');
+      container.innerHTML = '';
+      
+      const gimmickPlacementSlotIndex = 4; // Absolute layout tracking position
+      
+      for (let i = 0; i < db.fillers.length; i++) {
+        const img = document.createElement('img');
+        if (i === gimmickPlacementSlotIndex) {
+          img.src = db.gimmick;
+          img.addEventListener('click', () => launchPerformanceView());
+        } else {
+          img.src = db.fillers[i];
+          img.addEventListener('click', () => launchFullFillerLightbox(db.fillers[i]));
+        }
+        container.appendChild(img);
+      }
+    }
+
+    // 4. COORDINATE MATRIX ALIGNMENT ENGINE (AXIS PERSISTENCE)
+    function applyPerformanceMatrix() {
+      const perfClock = document.getElementById('clockText');
+      const wsClock = document.getElementById('workspaceClock');
+      const wsImg = document.getElementById('workspaceImage');
+      const perfImg = document.getElementById('performanceImage');
+
+      perfClock.textContent = formattedTimeStr;
+      
+      // Calculate axis locations using relative percentage configurations with center transforms
+      perfClock.style.left = `${matrixConfig.clockX}%`;
+      perfClock.style.top = `${matrixConfig.clockY}%`;
+      perfClock.style.fontSize = `${matrixConfig.fontSize}px`;
+      perfClock.style.transform = `translate(-50%, -50%) rotate(${matrixConfig.rotation}deg)`;
+
+      wsClock.style.left = `${matrixConfig.clockX}%`;
+      wsClock.style.top = `${matrixConfig.clockY}%`;
+      wsClock.style.fontSize = `${matrixConfig.fontSize}px`;
+      wsClock.style.transform = `translate(-50%, -50%) rotate(${matrixConfig.rotation}deg)`;
+
+      [wsImg, perfImg].forEach(img => {
+        if(img) {
+          img.style.transform = `translateY(${matrixConfig.bgY}px) scale(${matrixConfig.bgScale})`;
+        }
+      });
+
+      document.getElementById('sliderSize').value = matrixConfig.fontSize;
+      document.getElementById('lblSize').textContent = matrixConfig.fontSize;
+      document.getElementById('sliderRot').value = matrixConfig.rotation;
+      document.getElementById('lblRot').textContent = matrixConfig.rotation;
+      document.getElementById('sliderScale').value = matrixConfig.bgScale;
+      document.getElementById('lblScale').textContent = matrixConfig.bgScale;
+      document.getElementById('sliderBgY').value = matrixConfig.bgY;
+      document.getElementById('lblBgY').textContent = matrixConfig.bgY;
+      
+      if(db.gimmick) {
+        wsImg.src = db.gimmick;
+        perfImg.src = db.gimmick;
+      }
+    }
+
+    // WORKSPACE INTERACTIVE BOUNDARY TRACKING LOOPS
+    let isDraggingClock = false;
+    const workspaceClock = document.getElementById('workspaceClock');
+    const canvasFrame = document.getElementById('canvasFrame');
+
+    workspaceClock.addEventListener('pointerdown', (e) => {
+      isDraggingClock = true;
+      workspaceClock.setPointerCapture(e.pointerId);
+      e.stopPropagation();
+    });
+
+    canvasFrame.addEventListener('pointermove', (e) => {
+      if (!isDraggingClock) return;
+      const rect = canvasFrame.getBoundingClientRect();
+      
+      let clientX = e.clientX - rect.left;
+      let clientY = e.clientY - rect.top;
+
+      clientX = Math.max(0, Math.min(clientX, rect.width));
+      clientY = Math.max(0, Math.min(clientY, rect.height));
+
+      // Calculate and lock layout position strictly as viewport percentages (pctX and pctY)
+      matrixConfig.clockX = parseFloat(((clientX / rect.width) * 100).toFixed(2));
+      matrixConfig.clockY = parseFloat(((clientY / rect.height) * 100).toFixed(2));
+
+      workspaceClock.style.left = `${matrixConfig.clockX}%`;
+      workspaceClock.style.top = `${matrixConfig.clockY}%`;
+      saveStateToStorage();
+    });
+
+    workspaceClock.addEventListener('pointerup', (e) => {
+      if (isDraggingClock) {
+        isDraggingClock = false;
+        workspaceClock.releasePointerCapture(e.pointerId);
+        applyPerformanceMatrix();
+      }
+    });
+
+    // 5. BULLETPROOF POINTER-EVENT MULTI-TOUCH BACKDOOR GESTURE
+    function initPointerEvents() {
+      window.addEventListener('pointerdown', (e) => {
+        activePointersMap.set(e.pointerId, { startY: e.clientY, currentY: e.clientY });
+        
+        if (activePointersMap.size === 2) {
+          const points = Array.from(activePointersMap.values());
+          gestureStartY = (points.startY + points.startY) / 2;
+          isGestureValid = true;
+        }
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!activePointersMap.has(e.pointerId)) return;
+        activePointersMap.get(e.pointerId).currentY = e.clientY;
+
+        if (isGestureValid && activePointersMap.size === 2) {
+          const points = Array.from(activePointersMap.values());
+          const currentAvgY = (points.currentY + points.currentY) / 2;
+          const totalDisplacement = currentAvgY - gestureStartY;
+
+          if (totalDisplacement > 80) {
+            isGestureValid = false;
+            activePointersMap.clear();
+            launchTuningWorkspace();
+          }
+        }
+      });
+
+      const clearPointer = (e) => {
+        activePointersMap.delete(e.pointerId);
+        if (activePointersMap.size < 2) {
+          isGestureValid = false;
+        }
+      };
+
+      window.addEventListener('pointerup', clearPointer);
+      window.addEventListener('pointercancel', clearPointer);
+    }
+
+    // 2. REPAIR THE PASSCODE NAV ENTRY LOOP
+    function attachDOMEventListeners() {
+      document.querySelectorAll('.key-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (passcodeBuffer.length < 4) {
+            passcodeBuffer += btn.getAttribute('data-val');
+            updatePasscodeDots();
+            
+            const deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.textContent = passcodeBuffer.length > 0 ? "Delete" : "Cancel";
+
+            if (passcodeBuffer.length === 4) {
+              const hr = passcodeBuffer.substring(0, 2);
+              const min = passcodeBuffer.substring(2, 4);
+              formattedTimeStr = `${hr}:${min}`;
+              
+              // Hard-render onto hidden element BEFORE visibility layout updates trigger
+              document.getElementById('clockText').textContent = formattedTimeStr;
+              applyPerformanceMatrix();
+
+              setTimeout(() => {
+                // FIXED: Target #libraryScreen exactly to clear the interface execution freeze
+                switchActiveScreen('libraryScreen');
+                pushHistoryMarker('gallery');
+              }, 100);
+            }
+          }
+        });
+      });
+
+      document.getElementById('deleteBtn').addEventListener('click', () => {
+        if (passcodeBuffer.length > 0) {
+          passcodeBuffer = passcodeBuffer.slice(0, -1);
+          updatePasscodeDots();
+          document.getElementById('deleteBtn').textContent = passcodeBuffer.length > 0 ? "Delete" : "Cancel";
+        }
+      });
+
+      document.getElementById('forgotBtn').addEventListener('click', () => {
+        alert("System connection timeout. Please contact administrative support.");
+      });
+
+      // Range slider listeners
+      document.getElementById('sliderSize').addEventListener('input', (e) => {
+        matrixConfig.fontSize = parseInt(e.target.value);
+        saveStateToStorage();
+        applyPerformanceMatrix();
+      });
+      document.getElementById('sliderRot').addEventListener('input', (e) => {
+        matrixConfig.rotation = parseInt(e.target.value);
+        saveStateToStorage();
+        applyPerformanceMatrix();
+      });
+      document.getElementById('sliderScale').addEventListener('input', (e) => {
+        matrixConfig.bgScale = parseFloat(e.target.value);
+        saveStateToStorage();
+        applyPerformanceMatrix();
+      });
+      document.getElementById('sliderBgY').addEventListener('input', (e) => {
+        matrixConfig.bgY = parseInt(e.target.value);
+        saveStateToStorage();
+        applyPerformanceMatrix();
+      });
+
+      // Local file selection Base64 parsing loops
+      document.getElementById('fileGimmick').addEventListener('change', (e) => {
+        const file = e.target.files;
+        if (!file) return;
+        const reader = new FileReader();
+        reader.readAsDataURL(file[0]);
+        reader.onload = () => {
+          db.gimmick = reader.result;
+          saveStateToStorage();
+          renderGalleryGrid();
+          applyPerformanceMatrix();
+        };
+      });
+
+      document.getElementById('fileFillers').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        
+        let loadedStrings = [];
+        let done = 0;
+
+        files.forEach((file) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            loadedStrings.push(reader.result);
+            done++;
+            if (done === files.length) {
+              db.fillers = loadedStrings.slice(0, 24);
+              saveStateToStorage();
+              renderGalleryGrid();
+            }
+          };
+        });
+      });
+
+      document.getElementById('btnResetData').addEventListener('click', () => {
+        if(confirm("Purge memory cache completely?")) {
+          localStorage.clear();
+          location.reload();
+        }
+      });
+
+      document.getElementById('closeTuning').addEventListener('click', () => {
+        switchActiveScreen('lockScreen');
+        resetLockScreenState();
+        window.history.pushState(null, null, window.location.pathname);
+      });
+    }
+
+    function updatePasscodeDots() {
+      const dots = document.querySelectorAll('.dot');
+      dots.forEach((dot, idx) => {
+        if (idx < passcodeBuffer.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
+      });
+    }
+
+    function resetLockScreenState() {
+      passcodeBuffer = "";
+      updatePasscodeDots();
+      document.getElementById('deleteBtn').textContent = "Cancel";
+    }
+
+    function switchActiveScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function launchPerformanceView() {
+      switchActiveScreen('performanceScreen');
+      pushHistoryMarker('performance');
+    }
+
+    function launchFullFillerLightbox(imgSrc) {
+      const perfImg = document.getElementById('performanceImage');
+      const perfClock = document.getElementById('clockText');
+      
+      perfImg.src = imgSrc;
+      perfClock.style.display = 'none'; // Clear target values on baseline filler items
+      perfImg.style.transform = 'none'; 
+      
+      switchActiveScreen('performanceScreen');
+      pushHistoryMarker('lightbox');
+    }
+
+    function launchTuningWorkspace() {
+      switchActiveScreen('tuningDeck');
+      formattedTimeStr = "00:00";
+      applyPerformanceMatrix();
+      window.history.pushState({ screen: 'tuning' }, null, "");
+    }
+
+    // 6. INSTANT HARDWARE BACK BUTTON TRAPS
+    function setupHistoryStates() {
+      window.history.pushState(null, null, window.location.pathname);
+      
+      window.addEventListener('popstate', () => {
+        const activeScreen = document.querySelector('.screen.active').id;
+
+        if (activeScreen === 'performanceScreen') {
+          switchActiveScreen('libraryScreen');
+          document.getElementById('clockText').style.display = 'block';
+          applyPerformanceMatrix();
+          window.history.pushState(null, null, window.location.pathname);
+        } 
+        else if (activeScreen === 'libraryScreen') {
+          window.history.pushState(null, null, window.location.pathname);
+          triggerSystemToastAlert();
+        } 
+        else if (activeScreen === 'tuningDeck') {
+          switchActiveScreen('lockScreen');
+          resetLockScreenState();
+          window.history.pushState(null, null, window.location.pathname);
+        }
+        else {
+          window.history.pushState(null, null, window.location.pathname);
+        }
+      });
+    }
+
+    function pushHistoryMarker(type) {
+      window.history.pushState({ view: type }, null, "");
+    }
+
+    function triggerSystemToastAlert() {
+      backButtonTapCount++;
+      const toast = document.getElementById('toastAlert');
+      
+      if (backButtonTapCount === 1) {
+        toast.classList.add('show');
+        clearTimeout(backButtonTimeout);
+        backButtonTimeout = setTimeout(() => {
+          toast.classList.remove('show');
+          backButtonTapCount = 0;
+        }, 2000);
+      } else if (backButtonTapCount >= 2) {
+        toast.classList.remove('show');
+        switchActiveScreen('lockScreen');
+        resetLockScreenState();
+        backButtonTapCount = 0;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -59,7 +59,9 @@
     </div>
 
     <!-- The Time Overlay Dynamic Layer -->
-    <div id="live-time-overlay" class="dynamic-time" style="position: absolute;">00:00</div>
+    <!-- The Time Overlay Dynamic Layer -->
+<div id="live-time-overlay" class="dynamic-time">00:00</div>
+
 
     <!-- Hidden Setup / Tuning Control Deck Menu -->
     <div id="hidden-menu">
@@ -253,14 +255,22 @@
             }
         }
 
-        function openFullscreen(isGimmick, imgSrc = "") {
+                function openFullscreen(isGimmick, imgSrc = "") {
             const view = document.getElementById('fullscreen-view');
             const img = document.getElementById('viewed-image');
             
             if (isGimmick) {
                 img.src = gimmickBase64;
                 view.style.display = 'flex';
-                img.onload = function() { updateTextLayerLocation(false); };
+                // This tiny delay lets the fullscreen layout render completely before measuring pixels
+                img.onload = function() { 
+                    setTimeout(() => {
+                        updateTextLayerLocation(false); 
+                    }, 50);
+                };
+                if (img.complete) {
+                    setTimeout(() => { updateTextLayerLocation(false); }, 50);
+                }
             } else {
                 img.src = imgSrc;
                 view.style.display = 'flex';
@@ -268,10 +278,6 @@
             }
         }
 
-        function closeFullscreen() {
-            document.getElementById('fullscreen-view').style.display = 'none';
-            hideTimeOverlay();
-        }
     </script>
 </body>
 </html>

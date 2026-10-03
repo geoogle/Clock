@@ -36,7 +36,7 @@
         /* Fullscreen View Container */
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; align-items: center; justify-content: center; }
 
-        /* Gallery Overlay Chrome UI (Trust Factor) */
+        /* Gallery Overlay Chrome UI */
         .viewer-bar {
             position: absolute;
             left: 0;
@@ -170,7 +170,7 @@
             object-fit: contain;
         }
 
-        /* Direct Relative Time Layer (Unchanged Math) */
+        /* Direct Relative Time Layer */
         .dynamic-time {
             position: absolute;
             transform-origin: center center;
@@ -236,7 +236,7 @@
         <div id="performance-time-overlay" class="dynamic-time">00:00</div>
     </div>
 
-    <!-- Bottom Native Gallery Chrome (Trust Factor) -->
+    <!-- Bottom Native Gallery Chrome -->
     <div class="viewer-bar bottom" id="viewer-chrome-bottom">
         <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('Preparing image to share...');">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
@@ -280,7 +280,7 @@
         <div id="filler-status" class="upload-status" style="color: #4cd964;">0 / 25 Photos Loaded</div>
     </div>
 
-    <!-- Section 2: Fine-Tune Alignment Axes (Untouched) -->
+    <!-- Section 2: Fine-Tune Alignment Axes -->
     <div class="config-card">
         <div class="card-title">2. Fine-Tune Alignment Axes</div>
 
@@ -317,7 +317,6 @@
         <button class="btn-action btn-red" onclick="closeHiddenMenu()">Close Menu</button>
     </div>
 </div>
-
 <script>
     let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 24, rot: -1 };
     let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
@@ -367,11 +366,8 @@
         for (let i = 1; i <= 9; i++) {
             container.innerHTML += `<div class="key" onclick="pressKey('${i}')">${i}</div>`;
         }
-        // Blank space for balance
         container.innerHTML += `<div class="key key-action"></div>`;
-        // Zero
         container.innerHTML += `<div class="key" onclick="pressKey('0')">0</div>`;
-        // Backspace Delete Button
         container.innerHTML += `<div class="key key-action" onclick="deleteDigit()">⌫</div>`;
     }
 
@@ -430,7 +426,6 @@
         const img = document.getElementById('viewed-image');
         const overlay = document.getElementById('performance-time-overlay');
 
-        // Reset Chrome Bar Visibility
         chromeVisible = true;
         document.getElementById('viewer-chrome-top').style.opacity = '1';
         document.getElementById('viewer-chrome-bottom').style.opacity = '1';
@@ -467,11 +462,9 @@
     }
 
     function fakeToast(msg) {
-        // Discreely satisfies curiosity without breaking character
         console.log(msg);
     }
 
-    /* Unchanged Alignment Engine */
     function initSliders() {
         document.getElementById('slider-x').value = appConfig.x;
         document.getElementById('slider-y').value = appConfig.y;
@@ -578,24 +571,62 @@
         }
     });
 
-    document.getElementById('filler-input').addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        fillerImagesArray = [];
-        let loadedCount = 0;
+    /* Client-Side Bulk Photo Compression Engine */
+    document.getElementById('filler-input').addEventListener('change', async function(e) {
+        const files = Array.from(e.target.files).slice(0, 25);
+        if (files.length === 0) return;
 
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                fillerImagesArray.push(event.target.result);
-                loadedCount++;
-                if (loadedCount === files.length) {
-                    localStorage.setItem('mj_fillers', JSON.stringify(fillerImagesArray));
-                    document.getElementById('filler-status').innerText = `${loadedCount} / 25 Photos Loaded`;
-                    alert("Bulk Filler Images Stored!");
-                }
-            };
-            reader.readAsDataURL(file);
-        });
+        document.getElementById('filler-status').innerText = "Processing photos...";
+        document.getElementById('filler-status').style.color = "#ff9500";
+
+        fillerImagesArray = [];
+
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 800;
+                        let w = img.width;
+                        let h = img.height;
+
+                        if (w > h && w > maxDim) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else if (h > maxDim) {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.72));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const compressed = await compressImage(files[i]);
+                fillerImagesArray.push(compressed);
+                document.getElementById('filler-status').innerText = `Compressing ${i + 1} / ${files.length}...`;
+            }
+
+            localStorage.setItem('mj_fillers', JSON.stringify(fillerImagesArray));
+            document.getElementById('filler-status').innerText = `${fillerImagesArray.length} / 25 Photos Loaded`;
+            document.getElementById('filler-status').style.color = "#4cd964";
+            alert(`${fillerImagesArray.length} Bulk Photos Stored Successfully!`);
+        } catch (err) {
+            console.error("Storage error:", err);
+            alert("Storage limit reached. Try uploading fewer photos at once.");
+        }
     });
 
     // PWA Service Worker Registration

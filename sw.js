@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mentalism-time-app-v7';
+const CACHE_NAME = 'mentalism-time-app-v99';
 const ASSETS = [
   './',
   './index.html',

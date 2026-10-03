@@ -218,28 +218,72 @@
         document.getElementById('preview-time-overlay').style.display = 'none';
     }
 
-    /* Core Stage Alignment Logic */
-    function renderOverlay(isMenuPreview = false) {
-        const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
-        const stage = isMenuPreview ? document.getElementById('preview-stage') : document.getElementById('performance-stage');
-        const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
+    In the script section, find line 166:
+/* Core Stage Alignment Logic */
+function renderOverlay(isMenuPreview = false) {
+    const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
+    const stage = isMenuPreview ? document.getElementById('preview-stage') : document.getElementById('performance-stage');
+    const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
 
-        if (!img || !img.complete || img.naturalWidth === 0) {
-            overlay.style.display = 'none';
-            return;
-        }
-
-        // Scale font proportional to stage width (preview stage width reference = 180px)
-        const stageWidth = stage.clientWidth || 180;
-        const dynamicFontSize = Math.max(8, Math.round(appConfig.size * (stageWidth / 180)));
-
-        overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
-        overlay.style.left = `${appConfig.x}%`;
-        overlay.style.top = `${appConfig.y}%`;
-        overlay.style.fontSize = `${dynamicFontSize}px`;
-        overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-        overlay.style.display = 'block';
+    if (!img || !img.complete || img.naturalWidth === 0) {
+        overlay.style.display = 'none';
+        return;
     }
+
+    // Scale font proportional to stage width (preview stage width reference = 180px)
+    const stageWidth = stage.clientWidth || 180;
+    const dynamicFontSize = Math.max(8, Math.round(appConfig.size * (stageWidth / 180)));
+
+    overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
+    overlay.style.left = `${appConfig.x}%`;
+    overlay.style.top = `${appConfig.y}%`;
+    overlay.style.fontSize = `${dynamicFontSize}px`;
+    overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
+    overlay.style.display = 'block';
+}
+
+Replace lines 166 through 186 with:
+/* Core Stage Alignment Logic */
+function renderOverlay(isMenuPreview = false) {
+    const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
+    const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
+
+    if (!img || !img.complete || img.naturalWidth === 0) {
+        overlay.style.display = 'none';
+        return;
+    }
+
+    const rect = img.getBoundingClientRect();
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    const elemRatio = rect.width / rect.height;
+
+    let renderW = rect.width;
+    let renderH = rect.height;
+    let renderLeft = rect.left;
+    let renderTop = rect.top;
+
+    if (elemRatio > imgRatio) {
+        renderW = rect.height * imgRatio;
+        renderLeft += (rect.width - renderW) / 2;
+    } else {
+        renderH = rect.width / imgRatio;
+        renderTop += (rect.height - renderH) / 2;
+    }
+
+    const targetX = renderLeft + (renderW * (appConfig.x / 100));
+    const targetY = renderTop + (renderH * (appConfig.y / 100));
+    const dynamicFontSize = Math.max(10, Math.round(appConfig.size * (renderW / 240)));
+
+    overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
+    overlay.style.position = 'fixed';
+    overlay.style.left = `${Math.round(targetX)}px`;
+    overlay.style.top = `${Math.round(targetY)}px`;
+    overlay.style.fontSize = `${dynamicFontSize}px`;
+    overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
+    overlay.style.display = 'block';
+}
+
+
 
     function saveConfiguration() {
         localStorage.setItem('mj_config', JSON.stringify(appConfig));

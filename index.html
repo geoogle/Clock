@@ -1,9 +1,18 @@
+Here is the exact code restored to your preferred layout, including your header credits, the custom photo upload buttons, and the alignment engine intact:
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Photos</title>
+    
+    <!-- PWA Setup Headers -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html { width: 100%; height: 100%; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
@@ -21,84 +30,135 @@
         .thumbnail { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; cursor: pointer; }
 
         /* Fullscreen View Container */
-        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; }
-        #viewed-image { width: 100%; height: 100%; object-fit: contain; display: block; }
+        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; align-items: center; justify-content: center; }
 
-        /* Performance Time Layer */
-        #live-time-overlay {
-            position: fixed;
+        /* Hidden Menu Styling */
+        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 99999; color: #fff; padding: 18px; overflow-y: auto; }
+        
+        /* Your Custom Header Styling */
+        .fancy-header { 
+            font-family: 'Georgia', serif; 
+            font-style: italic; 
+            text-align: center; 
+            font-size: 26px; 
+            color: #d4af37; /* Gold */
+            margin-top: 10px;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        /* Menu Card Sections */
+        .config-card {
+            background: #1c1c1e;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #2c2c2e;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: #8e8e93;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        /* Upload Custom Buttons */
+        .custom-file-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+        .btn-blue { background: #007aff; }
+        .btn-purple { background: #5856d6; }
+        
+        .upload-status {
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        /* Slider Controls */
+        .control-group { margin-bottom: 14px; }
+        .control-group label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #ccc; }
+        .control-group input[type="range"] { width: 100%; accent-color: #007aff; }
+
+        /* Preview Outer Box */
+        .preview-outer {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border: 1px dashed #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .image-stage {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            max-height: 100%;
+            line-height: 0;
+        }
+
+        .stage-img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        /* Direct Relative Time Layer */
+        .dynamic-time {
+            position: absolute;
             transform-origin: center center;
             white-space: nowrap;
             pointer-events: none;
             font-weight: 600;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: #fff;
-            z-index: 6000;
+            z-index: 10;
+            line-height: 1;
             display: none;
         }
 
-        /* Direct Visual Calibration Stage */
-        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0a; z-index: 99999; color: #fff; }
-        
-        #calib-viewport {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: calc(100% - 140px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-        }
-
-        #calib-img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        .btn-action {
             display: block;
-        }
-
-        #draggable-time {
-            position: fixed;
-            transform-origin: center center;
-            white-space: nowrap;
-            font-weight: 600;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: #fff;
-            background: rgba(0, 122, 255, 0.4);
-            border: 1px dashed #007aff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            cursor: move;
-            touch-action: none;
-            z-index: 100000;
-        }
-
-        /* Bottom Controls Bar */
-        #calib-bar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
             width: 100%;
-            height: 140px;
-            background: #1a1a1a;
-            border-top: 1px solid #333;
-            padding: 10px 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            padding: 14px;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-top: 10px;
         }
-
-        .bar-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-        .bar-row label { font-size: 12px; color: #aaa; }
-        .bar-btn { padding: 8px 14px; background: #333; border: 1px solid #555; color: white; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .save-btn { background: #34c759; border: none; color: white; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; }
-        .exit-btn { background: #ff3b30; border: none; color: white; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; }
+        .btn-green { background: #34c759; }
+        .btn-red { background: #ff3b30; }
     </style>
 </head>
 <body>
 
+<!-- Passcode Lock Screen -->
 <div id="lock-screen">
     <div style="font-size: 18px; margin-bottom: 40px; font-weight: 300;">Enter Passcode</div>
     <div class="passcode-dots">
@@ -107,56 +167,88 @@
     <div class="keypad" id="keypad"></div>
 </div>
 
+<!-- Gallery Grid -->
 <div id="gallery-screen"></div>
 
+<!-- Full Screen Performance View -->
 <div id="fullscreen-view" onclick="closeFullscreen()">
-    <img id="viewed-image" src="" alt="">
-    <div id="live-time-overlay">00:00</div>
+    <div class="image-stage" id="performance-stage">
+        <img id="viewed-image" class="stage-img" src="" alt="">
+        <div id="performance-time-overlay" class="dynamic-time">00:00</div>
+    </div>
 </div>
 
+<!-- Hidden Configuration Deck -->
 <div id="hidden-menu">
-    <div id="calib-viewport">
-        <img id="calib-img" src="" alt="">
-        <div id="draggable-time">00:00</div>
+    
+    <!-- Credits Header -->
+    <div class="fancy-header">With Love Mentalist Jagath</div>
+
+    <!-- Section 1: Configure Photos -->
+    <div class="config-card">
+        <div class="card-title">1. Configure Photos</div>
+        
+        <label class="custom-file-btn btn-blue">
+            📁 Upload Gimmick Target Photo
+            <input type="file" id="gimmick-input" accept="image/*" style="display:none;">
+        </label>
+        <div id="gimmick-status" class="upload-status" style="color: #4cd964;">Target Gimmick Ready</div>
+
+        <label class="custom-file-btn btn-purple">
+            📚 Upload Bulk Filler Photos (Max 25)
+            <input type="file" id="filler-input" accept="image/*" multiple style="display:none;">
+        </label>
+        <div id="filler-status" class="upload-status" style="color: #4cd964;">0 / 25 Photos Loaded</div>
     </div>
 
-    <div id="calib-bar">
-        <div class="bar-row">
-            <label>Upload Photo:</label>
-            <input type="file" id="gimmick-input" accept="image/*" style="font-size: 11px; width: 180px;">
+    <!-- Section 2: Fine-Tune Alignment Axes -->
+    <div class="config-card">
+        <div class="card-title">2. Fine-Tune Alignment Axes</div>
+
+        <div class="control-group">
+            <label><span>Horizontal Position (X)</span> <span id="label-x">58%</span></label>
+            <input type="range" id="slider-x" min="0" max="100" value="58">
+        </div>
+        <div class="control-group">
+            <label><span>Vertical Position (Y)</span> <span id="label-y">73%</span></label>
+            <input type="range" id="slider-y" min="0" max="100" value="73">
+        </div>
+        <div class="control-group">
+            <label><span>Font Size</span> <span id="label-size">24px</span></label>
+            <input type="range" id="slider-size" min="8" max="60" value="24">
+        </div>
+        <div class="control-group">
+            <label><span>Rotation Angle</span> <span id="label-rot">-1°</span></label>
+            <input type="range" id="slider-rot" min="-180" max="180" value="-1">
+        </div>
+    </div>
+
+    <!-- Section 3: Alignment Canvas Preview -->
+    <div class="config-card">
+        <div class="card-title">Alignment Canvas Preview</div>
+        
+        <div class="preview-outer">
+            <div class="image-stage" id="preview-stage">
+                <img id="menu-preview-img" class="stage-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>">
+                <div id="preview-time-overlay" class="dynamic-time">00:00</div>
+            </div>
         </div>
 
-        <div class="bar-row">
-            <span style="font-size: 12px; color:#aaa;">Size:</span>
-            <button class="bar-btn" onclick="adjustSize(-2)">A-</button>
-            <button class="bar-btn" onclick="adjustSize(2)">A+</button>
-            <span style="font-size: 12px; color:#aaa;">Angle:</span>
-            <button class="bar-btn" onclick="adjustRot(-1)">↺ -1°</button>
-            <button class="bar-btn" onclick="adjustRot(1)">↻ +1°</button>
-        </div>
-
-        <div class="bar-row">
-            <button class="save-btn" onclick="saveConfiguration()">Save Position</button>
-            <button class="exit-btn" onclick="closeHiddenMenu()">Exit Menu</button>
-        </div>
+        <button class="btn-action btn-green" onclick="saveConfiguration()">Save Settings</button>
+        <button class="btn-action btn-red" onclick="closeHiddenMenu()">Close Menu</button>
     </div>
 </div>
 
 <script>
-    let appConfig = JSON.parse(localStorage.getItem('mj_config_drag')) || {
-        normX: 0.58,
-        normY: 0.73,
-        fontSizeRatio: 0.055,
-        rot: -1
-    };
-
+    // Configuration Model
+    let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 24, rot: -1 };
     let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
     let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];
     let enteredCode = "";
     let targetPerformanceTime = "00:00";
     let gimmickedIndexInGallery = 7;
 
-    // Two-Finger Slide Down
+    // Two-Finger Slide Down Detection
     let touchStartY = 0;
     document.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -175,136 +267,100 @@
 
     window.onload = function() {
         buildKeypad();
+        initSliders();
         if (gimmickBase64) {
-            document.getElementById('calib-img').src = gimmickBase64;
+            document.getElementById('menu-preview-img').src = gimmickBase64;
+            document.getElementById('gimmick-status').innerText = "Target Gimmick Saved Permanently";
+        } else {
+            document.getElementById('gimmick-status').innerText = "No image loaded";
+            document.getElementById('gimmick-status').style.color = "#ff3b30";
         }
-        setupDrag();
+
+        if (fillerImagesArray.length > 0) {
+            document.getElementById('filler-status').innerText = `${fillerImagesArray.length} / 25 Photos Loaded`;
+        }
     };
+
+    function initSliders() {
+        document.getElementById('slider-x').value = appConfig.x;
+        document.getElementById('slider-y').value = appConfig.y;
+        document.getElementById('slider-size').value = appConfig.size;
+        document.getElementById('slider-rot').value = appConfig.rot;
+        updateSliderLabels();
+
+        ['slider-x', 'slider-y', 'slider-size', 'slider-rot'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                appConfig = {
+                    x: parseFloat(document.getElementById('slider-x').value),
+                    y: parseFloat(document.getElementById('slider-y').value),
+                    size: parseInt(document.getElementById('slider-size').value),
+                    rot: parseInt(document.getElementById('slider-rot').value)
+                };
+                updateSliderLabels();
+                renderOverlay(true);
+            });
+        });
+    }
+
+    function updateSliderLabels() {
+        document.getElementById('label-x').innerText = `${appConfig.x}%`;
+        document.getElementById('label-y').innerText = `${appConfig.y}%`;
+        document.getElementById('label-size').innerText = `${appConfig.size}px`;
+        document.getElementById('label-rot').innerText = `${appConfig.rot}°`;
+    }
 
     function openHiddenMenu() {
         document.getElementById('hidden-menu').style.display = 'block';
-        setTimeout(renderCalibrationBox, 80);
+        setTimeout(() => renderOverlay(true), 50);
     }
 
     function closeHiddenMenu() {
         document.getElementById('hidden-menu').style.display = 'none';
+        document.getElementById('preview-time-overlay').style.display = 'none';
     }
 
-    function getImageRenderedBounds(img) {
-        const rect = img.getBoundingClientRect();
-        if (!img.naturalWidth || !img.naturalHeight) return rect;
+    function renderOverlay(isMenuPreview = false) {
+        const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
+        const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
 
+        if (!img || !img.complete || img.naturalWidth === 0) {
+            overlay.style.display = 'none';
+            return;
+        }
+
+        const rect = img.getBoundingClientRect();
         const imgRatio = img.naturalWidth / img.naturalHeight;
         const elemRatio = rect.width / rect.height;
 
-        let w = rect.width;
-        let h = rect.height;
-        let x = rect.left;
-        let y = rect.top;
+        let renderW = rect.width;
+        let renderH = rect.height;
+        let renderLeft = rect.left;
+        let renderTop = rect.top;
 
         if (elemRatio > imgRatio) {
-            w = h * imgRatio;
-            x += (rect.width - w) / 2;
+            renderW = rect.height * imgRatio;
+            renderLeft += (rect.width - renderW) / 2;
         } else {
-            h = w / imgRatio;
-            y += (rect.height - h) / 2;
+            renderH = rect.width / imgRatio;
+            renderTop += (rect.height - renderH) / 2;
         }
 
-        return { left: x, top: y, width: w, height: h };
-    }
+        const targetX = renderLeft + (renderW * (appConfig.x / 100));
+        const targetY = renderTop + (renderH * (appConfig.y / 100));
+        const dynamicFontSize = Math.max(10, Math.round(appConfig.size * (renderW / 240)));
 
-    function renderCalibrationBox() {
-        const img = document.getElementById('calib-img');
-        const box = document.getElementById('draggable-time');
-        if (!img.complete || img.naturalWidth === 0) return;
-
-        const bounds = getImageRenderedBounds(img);
-
-        const px = bounds.left + (bounds.width * appConfig.normX);
-        const py = bounds.top + (bounds.height * appConfig.normY);
-        const fSize = bounds.width * appConfig.fontSizeRatio;
-
-        box.style.left = `${Math.round(px)}px`;
-        box.style.top = `${Math.round(py)}px`;
-        box.style.fontSize = `${Math.round(fSize)}px`;
-        box.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-    }
-
-    function setupDrag() {
-        const box = document.getElementById('draggable-time');
-        let isDragging = false;
-
-        function start(e) {
-            isDragging = true;
-            e.preventDefault();
-        }
-
-        function move(e) {
-            if (!isDragging) return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            const img = document.getElementById('calib-img');
-            const bounds = getImageRenderedBounds(img);
-
-            let nx = (clientX - bounds.left) / bounds.width;
-            let ny = (clientY - bounds.top) / bounds.height;
-
-            nx = Math.max(0, Math.min(1, nx));
-            ny = Math.max(0, Math.min(1, ny));
-
-            appConfig.normX = nx;
-            appConfig.normY = ny;
-
-            renderCalibrationBox();
-        }
-
-        function end() {
-            isDragging = false;
-        }
-
-        box.addEventListener('mousedown', start);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', end);
-
-        box.addEventListener('touchstart', start, { passive: false });
-        window.addEventListener('touchmove', move, { passive: false });
-        window.addEventListener('touchend', end);
-    }
-
-    function adjustSize(delta) {
-        appConfig.fontSizeRatio += (delta * 0.003);
-        renderCalibrationBox();
-    }
-
-    function adjustRot(delta) {
-        appConfig.rot += delta;
-        renderCalibrationBox();
+        overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
+        overlay.style.position = 'fixed';
+        overlay.style.left = `${Math.round(targetX)}px`;
+        overlay.style.top = `${Math.round(targetY)}px`;
+        overlay.style.fontSize = `${dynamicFontSize}px`;
+        overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
+        overlay.style.display = 'block';
     }
 
     function saveConfiguration() {
-        localStorage.setItem('mj_config_drag', JSON.stringify(appConfig));
-        alert("Position Saved!");
-    }
-
-    function renderPerformanceOverlay() {
-        const overlay = document.getElementById('live-time-overlay');
-        const img = document.getElementById('viewed-image');
-
-        if (!img.complete || img.naturalWidth === 0) return;
-
-        const bounds = getImageRenderedBounds(img);
-
-        const px = bounds.left + (bounds.width * appConfig.normX);
-        const py = bounds.top + (bounds.height * appConfig.normY);
-        const fSize = bounds.width * appConfig.fontSizeRatio;
-
-        overlay.innerText = targetPerformanceTime;
-        overlay.style.left = `${Math.round(px)}px`;
-        overlay.style.top = `${Math.round(py)}px`;
-        overlay.style.fontSize = `${Math.round(fSize)}px`;
-        overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-        overlay.style.display = 'block';
+        localStorage.setItem('mj_config', JSON.stringify(appConfig));
+        alert("Settings Saved Successfully!");
     }
 
     function buildKeypad() {
@@ -359,25 +415,39 @@
     function openFullscreen(isGimmick, imgSrc = "") {
         const view = document.getElementById('fullscreen-view');
         const img = document.getElementById('viewed-image');
-        const overlay = document.getElementById('live-time-overlay');
+        const overlay = document.getElementById('performance-time-overlay');
 
         if (isGimmick) {
             img.src = gimmickBase64;
-            view.style.display = 'block';
+            view.style.display = 'flex';
 
-            img.onload = () => renderPerformanceOverlay();
-            if (img.complete) renderPerformanceOverlay();
+            img.onload = function() {
+                renderOverlay(false);
+                setTimeout(() => renderOverlay(false), 50);
+            };
+            if (img.complete) {
+                renderOverlay(false);
+                setTimeout(() => renderOverlay(false), 50);
+            }
         } else {
             img.src = imgSrc;
-            view.style.display = 'block';
+            view.style.display = 'flex';
             overlay.style.display = 'none';
         }
     }
 
     function closeFullscreen() {
         document.getElementById('fullscreen-view').style.display = 'none';
-        document.getElementById('live-time-overlay').style.display = 'none';
+        document.getElementById('performance-time-overlay').style.display = 'none';
     }
+
+    window.addEventListener('resize', () => {
+        if (document.getElementById('fullscreen-view').style.display === 'flex') {
+            renderOverlay(false);
+        } else if (document.getElementById('hidden-menu').style.display === 'block') {
+            renderOverlay(true);
+        }
+    });
 
     document.getElementById('gimmick-input').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -386,12 +456,44 @@
             reader.onload = function(event) {
                 gimmickBase64 = event.target.result;
                 localStorage.setItem('mj_gimmick', gimmickBase64);
-                document.getElementById('calib-img').src = gimmickBase64;
-                setTimeout(renderCalibrationBox, 100);
+                document.getElementById('menu-preview-img').src = gimmickBase64;
+                document.getElementById('gimmick-status').innerText = "Target Gimmick Saved Permanently";
+                document.getElementById('gimmick-status').style.color = "#4cd964";
+                setTimeout(() => renderOverlay(true), 100);
             };
             reader.readAsDataURL(file);
         }
     });
+
+    document.getElementById('filler-input').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        fillerImagesArray = [];
+        let loadedCount = 0;
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                fillerImagesArray.push(event.target.result);
+                loadedCount++;
+                if (loadedCount === files.length) {
+                    localStorage.setItem('mj_fillers', JSON.stringify(fillerImagesArray));
+                    document.getElementById('filler-status').innerText = `${loadedCount} / 25 Photos Loaded`;
+                    alert("Bulk Filler Images Stored!");
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Active!'))
+                .catch(err => console.log('SW Failed:', err));
+        });
+    }
 </script>
 </body>
 </html>
+

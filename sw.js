@@ -1,4 +1,4 @@
-Const CACHE_NAME = 'mentalism-time-app-v7';
+const CACHE_NAME = 'whispers-mind-v105';
 const ASSETS = [
   './',
   './index.html',
@@ -8,8 +8,14 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn(`Could not cache asset: ${asset}`, err);
+        }
+      }
     })
   );
   self.skipWaiting();
@@ -25,7 +31,7 @@ self.addEventListener('activate', (e) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 

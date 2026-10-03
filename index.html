@@ -1,306 +1,414 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Photos</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body, html { width: 100%; height: 100%; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
-        
-        /* Hidden Menu Styling */
-        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 99999; color: #fff; padding: 20px; overflow-y: auto; }
-        .fancy-header { font-family: 'Georgia', serif; font-style: italic; text-align: center; font-size: 28px; color: #ff6b6b; margin-bottom: 20px; }
-        .control-group { margin-bottom: 15px; }
-        .control-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #ccc; }
-        .control-group input[type="range"] { width: 100%; }
-        .btn { display: block; width: 100%; padding: 12px; background: #007aff; border: none; color: white; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; }
-        
-        /* Preview Wrapper - Updated to force a full responsive fill with zero letterboxing black bars */
-        .preview-container { position: relative; width: 100%; height: 250px; background: #222; border: 1px dashed #444; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; overflow: hidden; }
-        
-        /* STRETCH ENGINE: Forces the photo to stretch and fill 100% of the box space on ALL devices, completely eliminating black spaces */
-        .preview-img, .fullscreen-img { width: 100% !important; height: 100% !important; object-fit: fill !important; display: block; }
-        
-        /* Absolute Coordinate Text Anchors */
-        .dynamic-time { position: absolute; transform-origin: center center; white-space: nowrap; pointer-events: none; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; z-index: 6000; }
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
+    <title>Photos</title>  
+    <style>  
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }  
+        body, html { width: 100%; height: 100%; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }  
 
-        /* Lock Screen */
-        #lock-screen { position: fixed; width: 100%; height: 100%; background: #111; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .passcode-dots { display: flex; gap: 15px; margin-bottom: 30px; }
-        .dot { width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; }
-        .dot.filled { background: white; }
-        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .key { width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+        /* Hidden Menu Styling */  
+        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,10,0.96); z-index: 99999; color: #fff; padding: 20px; overflow-y: auto; }  
+        .fancy-header { font-family: 'Georgia', serif; font-style: italic; text-align: center; font-size: 26px; color: #ff6b6b; margin-bottom: 15px; }  
+        .instructions { font-size: 13px; color: #aaa; text-align: center; margin-bottom: 12px; line-height: 1.4; }
+        .instructions span { color: #4cd964; font-weight: bold; }
 
-        /* Gallery Grid */
-        #gallery-screen { display: none; width: 100%; height: 100%; background: #000; padding: 2px; overflow-y: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; align-content: start; }
-        .thumbnail { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; cursor: pointer; }
+        .control-group { margin-bottom: 15px; }  
+        .control-group label { display: block; margin-bottom: 5px; font-size: 13px; color: #ccc; }  
+        .control-group input[type="file"] { width: 100%; font-size: 13px; }  
+        .control-group input[type="range"] { width: 100%; }  
+        .btn { display: block; width: 100%; padding: 12px; background: #007aff; border: none; color: white; font-weight: bold; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 14px; }  
+          
+        /* Calibration Preview Container */  
+        .preview-wrapper { 
+            position: relative; 
+            width: 100%; 
+            max-height: 380px; 
+            background: #181818; 
+            border: 2px dashed #444; 
+            border-radius: 8px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 15px; 
+            overflow: hidden; 
+            touch-action: none;
+        }  
+          
+        .preview-img { 
+            max-width: 100%; 
+            max-height: 380px; 
+            width: auto; 
+            height: auto; 
+            object-fit: contain; 
+            display: block; 
+            cursor: crosshair;
+        }
 
-        /* Fullscreen View Container */
-        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; justify-content: center; align-items: center; }
+        .fullscreen-img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            display: block; 
+        }  
+          
+        /* Tap Indicator Pins */
+        .tap-pin { position: absolute; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 100001; }
+        #pin-1 { background: #ff3b30; border: 2px solid #fff; display: none; }
+        #pin-2 { background: #34c759; border: 2px solid #fff; display: none; }
+
+        /* Performance Time Overlay Layer */  
+        .dynamic-time { 
+            position: fixed; 
+            transform-origin: center center; 
+            white-space: nowrap; 
+            pointer-events: none; 
+            font-weight: 500; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            color: #fff; 
+            z-index: 100000; 
+            display: none;
+        }  
+
+        /* Passcode Lock Screen */  
+        #lock-screen { position: fixed; width: 100%; height: 100%; background: #111; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }  
+        .passcode-dots { display: flex; gap: 15px; margin-bottom: 30px; }  
+        .dot { width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; }  
+        .dot.filled { background: white; }  
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }  
+        .key { width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }  
+
+        /* Gallery Grid */  
+        #gallery-screen { display: none; width: 100%; height: 100%; background: #000; padding: 2px; overflow-y: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; align-content: start; }  
+        .thumbnail { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; cursor: pointer; }  
+
+        /* Fullscreen View Container */  
+        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; justify-content: center; align-items: center; }  
     </style>
-</head>
-<body>
+</head>  
+<body>  
 
-    <!-- Passcode Lock Screen -->
-    <div id="lock-screen">
-        <div style="font-size: 18px; margin-bottom: 40px; font-weight: 300;">Enter Passcode</div>
-        <div class="passcode-dots">
-            <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div>
-        </div>
-        <div class="keypad" id="keypad"></div>
+<div id="lock-screen">  
+    <div style="font-size: 18px; margin-bottom: 40px; font-weight: 300;">Enter Passcode</div>  
+    <div class="passcode-dots">  
+        <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div>  
+    </div>  
+    <div class="keypad" id="keypad"></div>  
+</div>  
+
+<div id="gallery-screen"></div>  
+
+<div id="fullscreen-view" onclick="closeFullscreen()">  
+    <img id="viewed-image" class="fullscreen-img" src="" alt="">  
+</div>  
+
+<!-- Live Reveal Overlay -->
+<div id="live-time-overlay" class="dynamic-time">00:00</div>  
+
+<!-- Interactive Tap Calibration Indicators -->
+<div id="pin-1" class="tap-pin"></div>
+<div id="pin-2" class="tap-pin"></div>
+
+<!-- Hidden Configuration Deck -->  
+<div id="hidden-menu">  
+    <div class="fancy-header">Whispers Setup</div>  
+    
+    <div class="instructions" id="setup-instruction-text">
+        Tap the <span>LEFT center</span> of the fake phone screen, then tap the <span>RIGHT center</span>. Angle & size will calculate automatically.
     </div>
 
-    <!-- App Photo Gallery Screen -->
-    <div id="gallery-screen"></div>
+    <div class="control-group">  
+        <label>Target Photo (Selfie with phone)</label>  
+        <input type="file" id="gimmick-input" accept="image/*">  
+    </div>  
 
-    <!-- Full Screen Photo Viewer Display Area -->
-    <div id="fullscreen-view" onclick="closeFullscreen()">
-        <img id="viewed-image" class="fullscreen-img" src="" alt="">
+    <div class="preview-wrapper">  
+        <img id="menu-preview-img" class="preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>">  
+    </div>  
+
+    <!-- Fine Tuning Scale (If text is slightly too big/small for screen) -->
+    <div class="control-group">
+        <label>Font Scale Multiplier</label>
+        <input type="range" id="slider-scale" min="15" max="45" value="28">
     </div>
 
-    <!-- The Time Overlay Dynamic Layer -->
-    <div id="live-time-overlay" class="dynamic-time">00:00</div>
+    <button class="btn" style="background:#34c759;" onclick="resetTaps()">Reset Tap Points</button>
+    <button class="btn" style="background:#555;" onclick="closeHiddenMenu()">Exit Menu</button>  
+</div>  
 
-    <!-- Hidden Setup / Tuning Control Deck Menu -->
-    <div id="hidden-menu">
-        <div class="fancy-header">With Love Mentalist Jagath</div>
+<script>  
+    // Calibration state: Stores normalized geometry (0.0 to 1.0)
+    let calib = JSON.parse(localStorage.getItem('mj_calibration')) || null;
+    let fontMultiplier = parseFloat(localStorage.getItem('mj_font_mult')) || 0.28;
+    let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";  
+    let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];  
+    let enteredCode = "";  
+    let targetPerformanceTime = "00:00";  
+    let gimmickedIndexInGallery = 7; 
+
+    // Calibration runtime state
+    let tapStep = 0;
+    let tempPoint1 = null;
+
+    // Two-Finger Slide Down Activation
+    let touchStartY = 0;  
+    document.addEventListener('touchstart', (e) => {  
+        if (e.touches.length === 2) { 
+            touchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2; 
+        }  
+    });  
+    document.addEventListener('touchend', (e) => {  
+        if (touchStartY > 0) {  
+            let currentY = (e.changedTouches[0].clientY + (e.changedTouches[1] ? e.changedTouches[1].clientY : e.changedTouches[0].clientY)) / 2;  
+            if (currentY - touchStartY > 120 && touchStartY < 220) { openHiddenMenu(); }  
+            touchStartY = 0;  
+        }  
+    });  
+
+    window.onload = function() {  
+        buildKeypad();  
+        document.getElementById('slider-scale').value = Math.round(fontMultiplier * 100);
+        document.getElementById('slider-scale').addEventListener('input', (e) => {
+            fontMultiplier = parseInt(e.target.value) / 100;
+            localStorage.setItem('mj_font_mult', fontMultiplier);
+            updateTextPosition(true);
+        });
+
+        if (gimmickBase64) {
+            document.getElementById('menu-preview-img').src = gimmickBase64;  
+        }
+    };  
+
+    function openHiddenMenu() {   
+        document.getElementById('hidden-menu').style.display = 'block';   
+        resetTaps();
+        setTimeout(() => updateTextPosition(true), 60);   
+    }  
+
+    function closeHiddenMenu() {   
+        document.getElementById('hidden-menu').style.display = 'none';   
+        document.getElementById('pin-1').style.display = 'none';
+        document.getElementById('pin-2').style.display = 'none';
+        hideTimeOverlay();   
+    }  
+
+    function resetTaps() {
+        tapStep = 0;
+        tempPoint1 = null;
+        document.getElementById('pin-1').style.display = 'none';
+        document.getElementById('pin-2').style.display = 'none';
+        document.getElementById('setup-instruction-text').innerHTML = "Tap the <span>LEFT side</span> of the phone display, then the <span>RIGHT side</span>.";
+    }
+
+    // Precise bounding calculation for images displayed with object-fit: contain
+    function getRenderedImageRect(img) {
+        const rect = img.getBoundingClientRect();
+        if (!img.naturalWidth || !img.naturalHeight) return rect;
+
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const elemRatio = rect.width / rect.height;
+
+        let w = rect.width;
+        let h = rect.height;
+        let x = rect.left;
+        let y = rect.top;
+
+        if (elemRatio > imgRatio) {
+            w = h * imgRatio;
+            x += (rect.width - w) / 2;
+        } else {
+            h = w / imgRatio;
+            y += (rect.height - h) / 2;
+        }
+
+        return { left: x, top: y, width: w, height: h };
+    }
+
+    // Handle 2-Point Calibration Click/Touch
+    document.getElementById('menu-preview-img').addEventListener('click', function(e) {
+        const rendered = getRenderedImageRect(this);
+
+        // Normalize coordinates relative strictly to photo content (0.0 to 1.0)
+        const normX = (e.clientX - rendered.left) / rendered.width;
+        const normY = (e.clientY - rendered.top) / rendered.height;
+
+        // Ensure click landed inside the actual photo area
+        if (normX < 0 || normX > 1 || normY < 0 || normY > 1) return;
+
+        if (tapStep === 0) {
+            tempPoint1 = { x: normX, y: normY };
+            tapStep = 1;
+
+            const p1 = document.getElementById('pin-1');
+            p1.style.left = `${e.clientX}px`;
+            p1.style.top = `${e.clientY}px`;
+            p1.style.display = 'block';
+
+            document.getElementById('setup-instruction-text').innerHTML = "Point 1 Set! Now tap the <span>RIGHT side</span> of the phone display.";
+        } else {
+            const tempPoint2 = { x: normX, y: normY };
+            tapStep = 0;
+
+            const p2 = document.getElementById('pin-2');
+            p2.style.left = `${e.clientX}px`;
+            p2.style.top = `${e.clientY}px`;
+            p2.style.display = 'block';
+
+            // Trigonometric resolution of Center, Tilt Angle, and Display Span
+            const dx = tempPoint2.x - tempPoint1.x;
+            const dy = (tempPoint2.y - tempPoint1.y) * (this.naturalHeight / this.naturalWidth);
+
+            const centerX = (tempPoint1.x + tempPoint2.x) / 2;
+            const centerY = (tempPoint1.y + tempPoint2.y) / 2;
+            const calculatedAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+            const calibratedWidthRatio = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+
+            calib = {
+                cx: centerX,
+                cy: centerY,
+                angle: calculatedAngle,
+                widthSpan: calibratedWidthRatio
+            };
+
+            localStorage.setItem('mj_calibration', JSON.stringify(calib));
+            document.getElementById('setup-instruction-text').innerHTML = "<span style='color:#34c759;'>Locked & Calibrated!</span> Works automatically on all screens.";
+            updateTextPosition(true);
+        }
+    });
+
+    // Universal Auto-Positioning Engine
+    function updateTextPosition(isMenuPreview = false) {  
+        if (!calib) return;
+
+        const overlay = document.getElementById('live-time-overlay');  
+        const targetImg = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');  
+          
+        if (!targetImg || !targetImg.complete || targetImg.naturalWidth === 0) {  
+            hideTimeOverlay();  
+            return;  
+        }  
+
+        const rendered = getRenderedImageRect(targetImg);  
+
+        // Absolute pixel translation relative to dynamic viewport
+        const targetX = rendered.left + (rendered.width * calib.cx);
+        const targetY = rendered.top + (rendered.height * calib.cy);
         
-        <div class="control-group">
-            <label>1. Gimmick Target Photo</label>
-            <input type="file" id="gimmick-input" accept="image/*">
-        </div>
-        <div class="control-group">
-            <label>2. Bulk Filler Photos (Up to 25)</label>
-            <input type="file" id="filler-input" accept="image/*" multiple>
-        </div>
+        // Font size scales to match the exact span between tapped corners
+        const autoFontSize = rendered.width * calib.widthSpan * fontMultiplier;
 
-        <div class="preview-container">
-            <img id="menu-preview-img" class="preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23333'/></svg>">
-        </div>
+        overlay.innerHTML = isMenuPreview ? "00:00" : targetPerformanceTime;  
+        overlay.style.position = 'fixed';  
+        overlay.style.left = `${Math.round(targetX)}px`;  
+        overlay.style.top = `${Math.round(targetY)}px`;  
+        overlay.style.fontSize = `${Math.max(10, Math.round(autoFontSize))}px`;  
+        overlay.style.transform = `translate(-50%, -50%) rotate(${calib.angle}deg)`;  
+        overlay.style.display = 'block';  
+    }  
 
-        <!-- Math Positioning Axis Bars -->
-        <div class="control-group"><label>Horizontal Position (X %)</label><input type="range" id="slider-x" min="0" max="100" value="50"></div>
-        <div class="control-group"><label>Vertical Position (Y %)</label><input type="range" id="slider-y" min="0" max="100" value="50"></div>
-        <div class="control-group"><label>Font Size (px)</label><input type="range" id="slider-size" min="10" max="100" value="30"></div>
-        <div class="control-group"><label>Rotation (deg)</label><input type="range" id="slider-rot" min="-180" max="180" value="0"></div>
+    function hideTimeOverlay() {   
+        document.getElementById('live-time-overlay').style.display = 'none';   
+    }  
 
-        <button class="btn" onclick="saveConfiguration()">Save Alignment Settings</button>
-        <button class="btn" style="background:#555;" onclick="closeHiddenMenu()">Exit Configuration</button>
-    </div>
+    window.addEventListener('resize', () => {  
+        const isPerformance = document.getElementById('fullscreen-view').style.display === 'flex';  
+        const isMenu = document.getElementById('hidden-menu').style.display === 'block';  
+        if (isPerformance) updateTextPosition(false);  
+        else if (isMenu) updateTextPosition(true);  
+    });  
 
-    <script>
-        // Data States & Config Storage Variables
-        let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 50, y: 50, size: 30, rot: 0 };
-        let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
-        let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];
-        let enteredCode = "";
-        let targetPerformanceTime = "00:00";
-        let gimmickedIndexInGallery = 7; // Hidden at position 8 in grid array layout
+    function buildKeypad() {  
+        const container = document.getElementById('keypad');  
+        container.innerHTML = "";  
+        for (let i = 1; i <= 9; i++) {  
+            container.innerHTML += `<div class="key" onclick="pressKey('${i}')">${i}</div>`;  
+        }  
+        container.innerHTML += `<div class="key" style="background:transparent;"></div>`;  
+        container.innerHTML += `<div class="key" onclick="pressKey('0')">0</div>`;  
+    }  
 
-        // Two-Finger Slide Down Trigger Setup Detection
-        let touchStartY = 0;
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) { touchStartY = (e.touches.clientY + e.touches.clientY) / 2; }
-        });
-        document.addEventListener('touchend', (e) => {
-            if (touchStartY > 0) {
-                let currentY = (e.changedTouches.clientY + (e.changedTouches ? e.changedTouches.clientY : e.changedTouches.clientY)) / 2;
-                if (currentY - touchStartY > 120 && touchStartY < 180) { openHiddenMenu(); }
-                touchStartY = 0;
-            }
-        });
+    function pressKey(num) {  
+        if (enteredCode.length < 4) {  
+            enteredCode += num;  
+            document.getElementById(`d${enteredCode.length}`).classList.add('filled');  
+        }  
+        if (enteredCode.length === 4) {  
+            setTimeout(processUnlockSequence, 200);  
+        }  
+    }  
 
-        // Initialize App Configuration on Launch
-        window.onload = function() {
-            buildKeypad();
-            initSliders();
-            if (gimmickBase64) document.getElementById('menu-preview-img').src = gimmickBase64;
-        };
+    function processUnlockSequence() {  
+        let hr = enteredCode.substring(0, 2);  
+        let min = enteredCode.substring(2, 4);  
+        targetPerformanceTime = `${hr}:${min}`;  
+          
+        document.getElementById('lock-screen').style.display = 'none';  
+        document.getElementById('gallery-screen').style.display = 'grid';  
+        generateGalleryGrid();  
+    }  
 
-        function openHiddenMenu() { 
-            document.getElementById('hidden-menu').style.display = 'block'; 
-            updateTextLayerLocation(true); 
-        }
-        function closeHiddenMenu() { 
-            document.getElementById('hidden-menu').style.display = 'none'; 
-            hideTimeOverlay(); 
-        }
+    function generateGalleryGrid() {  
+        const grid = document.getElementById('gallery-screen');  
+        grid.innerHTML = "";  
+          
+        let totalSlotsCount = Math.max(25, fillerImagesArray.length + 1);  
+        let fillerPointer = 0;  
 
-        function initSliders() {
-            document.getElementById('slider-x').value = appConfig.x;
-            document.getElementById('slider-y').value = appConfig.y;
-            document.getElementById('slider-size').value = appConfig.size;
-            document.getElementById('slider-rot').value = appConfig.rot;
+        for (let i = 0; i < totalSlotsCount; i++) {  
+            if (i === gimmickedIndexInGallery) {  
+                let srcImg = gimmickBase64 || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23555'/></svg>";  
+                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(true)">`;  
+            } else {  
+                let srcImg = fillerImagesArray[fillerPointer] || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>";  
+                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(false, '${srcImg}')">`;  
+                if (fillerImagesArray[fillerPointer]) fillerPointer++;  
+            }  
+        }  
+    }  
 
-            ['slider-x', 'slider-y', 'slider-size', 'slider-rot'].forEach(id => {
-                document.getElementById(id).addEventListener('input', () => {
-                    appConfig = {
-                        x: parseFloat(document.getElementById('slider-x').value),
-                        y: parseFloat(document.getElementById('slider-y').value),
-                        size: parseInt(document.getElementById('slider-size').value),
-                        rot: parseInt(document.getElementById('slider-rot').value)
-                    };
-                    updateTextLayerLocation(document.getElementById('hidden-menu').style.display === 'block');
-                });
-            });
-        }
+    function openFullscreen(isGimmick, imgSrc = "") {  
+        const view = document.getElementById('fullscreen-view');  
+        const img = document.getElementById('viewed-image');  
+          
+        if (isGimmick) {  
+            img.src = gimmickBase64;  
+            view.style.display = 'flex';  
+              
+            img.onload = function() {   
+                updateTextPosition(false);  
+                setTimeout(() => updateTextPosition(false), 50);   
+            };  
+            if (img.complete) {  
+                updateTextPosition(false);  
+                setTimeout(() => updateTextPosition(false), 50);  
+            }  
+        } else {  
+            img.src = imgSrc;  
+            view.style.display = 'flex';  
+            hideTimeOverlay();  
+        }  
+    }  
 
-        // --- KEY COGNITIVE ALIGNMENT LOGIC ---
-        function updateTextLayerLocation(isMenuPreview = false) {
-            const overlay = document.getElementById('live-time-overlay');
-            const targetImg = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
-            
-            if (!targetImg || !targetImg.complete || targetImg.naturalWidth === 0) {
-                hideTimeOverlay();
-                return;
-            }
+    function closeFullscreen() {  
+        document.getElementById('fullscreen-view').style.display = 'none';  
+        hideTimeOverlay();  
+    }  
 
-            const rect = targetImg.getBoundingClientRect();
+    document.getElementById('gimmick-input').addEventListener('change', function(e) {  
+        const file = e.target.files[0];  
+        if (file) {  
+            const reader = new FileReader();  
+            reader.onload = function(event) {  
+                gimmickBase64 = event.target.result;  
+                localStorage.setItem('mj_gimmick', gimmickBase64);  
+                document.getElementById('menu-preview-img').src = gimmickBase64;  
+                resetTaps();
+            };  
+            reader.readAsDataURL(file);  
+        }  
+    });  
+</script>
 
-            // Font scales perfectly relative to how wide the fullscreen view stretches compared to the preview window width
-            const previewWidth = document.getElementById('menu-preview-img').getBoundingClientRect().width || 350;
-            const dynamicFontSize = appConfig.size * (isMenuPreview ? 1 : (rect.width / previewWidth));
-
-            overlay.innerHTML = isMenuPreview ? "00:00" : targetPerformanceTime;
-            
-            // Absolute positioning anchors text precisely to the photo container layout percentages
-            overlay.style.position = 'fixed';
-            overlay.style.left = `${Math.round(rect.left + (rect.width * (appConfig.x / 100)))}px`;
-            overlay.style.top = `${Math.round(rect.top + (rect.height * (appConfig.y / 100)))}px`;
-            overlay.style.fontSize = `${Math.round(dynamicFontSize)}px`;
-            overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-            overlay.style.display = 'block';
-        }
-
-        function hideTimeOverlay() { 
-            document.getElementById('live-time-overlay').style.display = 'none'; 
-        }
-        
-        window.addEventListener('resize', () => {
-            const fullScreenOpen = document.getElementById('fullscreen-view').style.display === 'flex';
-            const menuOpen = document.getElementById('hidden-menu').style.display === 'block';
-            if (fullScreenOpen) updateTextLayerLocation(false);
-            else if (menuOpen) updateTextLayerLocation(true);
-        });
-
-        function buildKeypad() {
-            const container = document.getElementById('keypad');
-            container.innerHTML = "";
-            for (let i = 1; i <= 9; i++) {
-                container.innerHTML += `<div class="key" onclick="pressKey('${i}')">${i}</div>`;
-            }
-            container.innerHTML += `<div class="key" style="background:transparent;"></div>`;
-            container.innerHTML += `<div class="key" onclick="pressKey('0')">0</div>`;
-        }
-
-        function pressKey(num) {
-            if (enteredCode.length < 4) {
-                enteredCode += num;
-                document.getElementById(`d${enteredCode.length}`).classList.add('filled');
-            }
-            if (enteredCode.length === 4) {
-                setTimeout(processUnlockSequence, 200);
-            }
-        }
-
-        function processUnlockSequence() {
-            let hr = enteredCode.substring(0, 2);
-            let min = enteredCode.substring(2, 4);
-            targetPerformanceTime = `${hr}:${min}`;
-            
-            document.getElementById('lock-screen').style.display = 'none';
-            document.getElementById('gallery-screen').style.display = 'grid';
-            generateGalleryGrid();
-        }
-
-        function generateGalleryGrid() {
-            const grid = document.getElementById('gallery-screen');
-            grid.innerHTML = "";
-            
-            let totalSlotsCount = Math.max(25, fillerImagesArray.length + 1);
-            let fillerPointer = 0;
-
-            for (let i = 0; i < totalSlotsCount; i++) {
-                if (i === gimmickedIndexInGallery) {
-                    let srcImg = gimmickBase64 || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23555'/></svg>";
-                    grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(true)">`;
-                } else {
-                    let srcImg = fillerImagesArray[fillerPointer] || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>";
-                    grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(false, '${srcImg}')">`;
-                    if (fillerImagesArray[fillerPointer]) fillerPointer++;
-                }
-            }
-        }
-
-        function openFullscreen(isGimmick, imgSrc = "") {
-            const view = document.getElementById('fullscreen-view');
-            const img = document.getElementById('viewed-image');
-            
-            if (isGimmick) {
-                img.src = gimmickBase64;
-                view.style.display = 'flex';
-                
-                img.onload = function() { 
-                    updateTextLayerLocation(false);
-                    setTimeout(() => { updateTextLayerLocation(false); }, 50); 
-                    setTimeout(() => { updateTextLayerLocation(false); }, 150); 
-                };
-                if (img.complete) {
-                    updateTextLayerLocation(false);
-                    setTimeout(() => { updateTextLayerLocation(false); }, 50);
-                    setTimeout(() => { updateTextLayerLocation(false); }, 150);
-                }
-            } else {
-                img.src = imgSrc;
-                view.style.display = 'flex';
-                hideTimeOverlay();
-            }
-        }
-
-        function saveConfiguration() {
-            localStorage.setItem('mj_config', JSON.stringify(appConfig));
-            alert("Alignment Settings Saved Successfully!");
-        }
-
-        function closeFullscreen() {
-            document.getElementById('fullscreen-view').style.display = 'none';
-            hideTimeOverlay();
-        }
-
-        document.getElementById('gimmick-input').addEventListener('change', function(e) {
-            const file = e.target.files;
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    gimmickBase64 = event.target.result;
-                    localStorage.setItem('mj_gimmick', gimmickBase64);
-                    document.getElementById('menu-preview-img').src = gimmickBase64;
-                    setTimeout(() => updateTextLayerLocation(true), 150);
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        document.getElementById('filler-input').addEventListener('change', function(e) {
-            const files = Array.from(e.target.files);
-            fillerImagesArray = [];
-            let loadedCount = 0;
-
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    fillerImagesArray.push(event.target.result);
-                    loadedCount++;
-                    if (loadedCount === files.length) {
-                        localStorage.setItem('mj_fillers', JSON.stringify(fillerImagesArray));
-                        alert("Bulk Filler Images Stored!");
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-    </script>
-</body>
+</body>  
 </html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whispers-clock-v115';
+const CACHE_NAME = 'whispers-clock-v120';
 const ASSETS = [
   '/Clock/',
   '/Clock/index.html',

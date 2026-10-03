@@ -1,9 +1,8 @@
-const CACHE_NAME = 'whispers-mind-v105';
+const CACHE_NAME = 'whispers-clock-v115';
 const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './app-icon.png'
+  '/Clock/',
+  '/Clock/index.html',
+  '/Clock/manifest.json'
 ];
 
 self.addEventListener('install', (e) => {
@@ -13,7 +12,7 @@ self.addEventListener('install', (e) => {
         try {
           await cache.add(asset);
         } catch (err) {
-          console.warn(`Could not cache asset: ${asset}`, err);
+          console.warn(`Could not cache: ${asset}`, err);
         }
       }
     })
@@ -26,9 +25,7 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
@@ -37,8 +34,6 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
-    })
+    caches.match(e.request).then((res) => res || fetch(e.request))
   );
 });

@@ -54,9 +54,14 @@
     <div id="gallery-screen"></div>
 
     <!-- Full Screen Photo Viewer Display Area -->
+        <!-- Full Screen Photo Viewer Display Area -->
     <div id="fullscreen-view" onclick="closeFullscreen()">
-        <img id="viewed-image" class="fullscreen-img" src="" alt="">
+        <!-- This relative wrapper forces the text to stay physically glued inside the photo pixels -->
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: 100%;">
+            <img id="viewed-image" class="fullscreen-img" src="" alt="">
+        </div>
     </div>
+
 
     <!-- The Time Overlay Dynamic Layer -->
     <div id="live-time-overlay" class="dynamic-time">00:00</div>
@@ -144,54 +149,43 @@
             const overlay = document.getElementById('live-time-overlay');
             const targetImg = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
             
-            if (!targetImg || !targetImg.complete || targetImg.naturalWidth === 0) {
+            if (!targetImg) {
                 hideTimeOverlay();
                 return;
             }
 
-            // 1. Grab element viewport boundary rect
-            const rect = targetImg.getBoundingClientRect();
-            
-            // 2. Cross-platform math to calculate EXACT visible image dimensions (strips empty letterboxing)
-            const imgRatio = targetImg.naturalWidth / targetImg.naturalHeight;
-            const containerRatio = rect.width / rect.height;
-            
-            let visibleWidth = rect.width;
-            let visibleHeight = rect.height;
-            let visibleLeft = rect.left;
-            let visibleTop = rect.top;
-
-            if (containerRatio > imgRatio) {
-                visibleWidth = rect.height * imgRatio;
-                visibleLeft = rect.left + (rect.width - visibleWidth) / 2;
-            } else {
-                visibleHeight = rect.width / imgRatio;
-                visibleTop = rect.top + (rect.height - visibleHeight) / 2;
-            }
-            
-            // 3. Pin percentages strictly to the photo pixels
-            const exactPixelX = visibleLeft + (visibleWidth * (appConfig.x / 100));
-            const exactPixelY = visibleTop + (visibleHeight * (appConfig.y / 100));
-
             overlay.innerHTML = isMenuPreview ? "00:00" : targetPerformanceTime;
-            overlay.style.position = 'fixed';
-            
-            // 4. Scale font dynamically based on the exact scale ratio of the image currently rendered on screen
-            const baselineWidth = isMenuPreview ? visibleWidth : document.getElementById('menu-preview-img').getBoundingClientRect().width || visibleWidth;
-            const sizeNormalizationFactor = visibleWidth / baselineWidth;
-            const computedDynamicFontSize = appConfig.size * (isMenuPreview ? 1 : sizeNormalizationFactor);
 
-            // 5. Using Math.round prevents text rendering blurs on high-DPI iOS/Android displays
-            overlay.style.left = `${Math.round(exactPixelX)}px`;
-            overlay.style.top = `${Math.round(exactPixelY)}px`;
-            overlay.style.fontSize = `${Math.round(computedDynamicFontSize)}px`;
+            if (isMenuPreview) {
+                // Inside the hidden menu container layout context
+                const rect = targetImg.getBoundingClientRect();
+                overlay.style.position = 'fixed';
+                overlay.style.left = `${Math.round(rect.left + (rect.width * (appConfig.x / 100)))}px`;
+                overlay.style.top = `${Math.round(rect.top + (rect.height * (appConfig.y / 100)))}px`;
+                overlay.style.fontSize = `${appConfig.size}px`;
+            } else {
+                // Inside the PWA spectator fullscreen view context
+                // This physically injects the overlay text layer inside the image's parent box elements
+                if (overlay.parentElement !== targetImg.parentElement) {
+                    targetImg.parentElement.appendChild(overlay);
+                }
+                overlay.style.position = 'absolute';
+                overlay.style.left = `${appConfig.x}%`;
+                overlay.style.top = `${appConfig.y}%`;
+                
+                // Pure cross-platform multiplier standardizes custom text scale sizes cleanly
+                const scaleMultiplier = window.innerHeight / 250; 
+                overlay.style.fontSize = `${Math.round(appConfig.size * (scaleMultiplier * 0.4))}px`;
+            }
+
             overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
             overlay.style.display = 'block';
         }
 
-        function hideTimeOverlay() { document.getElementById('live-time-overlay').style.display = 'none'; }
+        function hideTimeOverlay() { 
+            document.getElementById('live-time-overlay').style.display = 'none'; 
+        }
         
-        // Multi-event fallback system for Android layout changes and iOS viewport shifts
         window.addEventListener('resize', () => {
             const fullScreenOpen = document.getElementById('fullscreen-view').style.display === 'flex';
             const menuOpen = document.getElementById('hidden-menu').style.display === 'block';
@@ -255,7 +249,6 @@
                 img.src = gimmickBase64;
                 view.style.display = 'flex';
                 
-                // Double-firing calculation engine protects alignment from latent iOS redraw speeds
                 img.onload = function() { 
                     updateTextLayerLocation(false);
                     setTimeout(() => { updateTextLayerLocation(false); }, 50); 
@@ -280,6 +273,8 @@
 
         function closeFullscreen() {
             document.getElementById('fullscreen-view').style.display = 'none';
+            // Safety handler clean-returns overlay to main tree root when spectator closes view
+            document.body.appendChild(document.getElementById('live-time-overlay'));
             hideTimeOverlay();
         }
 

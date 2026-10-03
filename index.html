@@ -21,53 +21,40 @@
         .thumbnail { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; cursor: pointer; }
 
         /* Fullscreen View Container */
-        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; align-items: center; justify-content: center; }
+        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; overflow: hidden; }
+        #viewed-image { width: 100%; height: 100%; object-fit: contain; display: block; }
 
         /* Hidden Menu Styling */
-        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 99999; color: #fff; padding: 20px; overflow-y: auto; }
-        .menu-title { text-align: center; font-size: 18px; font-weight: 600; color: #aaa; margin-bottom: 15px; letter-spacing: 0.5px; }
-        .control-group { margin-bottom: 12px; }
-        .control-group label { display: block; margin-bottom: 5px; font-size: 13px; color: #ccc; }
+        #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 99999; color: #fff; padding: 15px; overflow-y: auto; }
+        .menu-title { text-align: center; font-size: 15px; font-weight: 600; color: #aaa; margin-bottom: 12px; letter-spacing: 0.5px; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 4px; font-size: 13px; color: #ccc; }
         .control-group input[type="range"] { width: 100%; accent-color: #007aff; }
-        .btn { display: block; width: 100%; padding: 12px; background: #007aff; border: none; color: white; font-weight: bold; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 14px; }
+        .btn { display: block; width: 100%; padding: 12px; border: none; color: white; font-weight: bold; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 14px; }
         .btn-green { background: #34c759; }
         .btn-red { background: #ff3b30; }
 
-        /* Preview Outer Box */
+        /* Preview Outer Box - Locked to Portrait Ratio */
         .preview-outer {
-            width: 100%;
+            position: relative;
+            width: 170px;
             height: 300px;
-            background: #0d0d0d;
-            border: 1px dashed #333;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
+            margin: 0 auto 15px auto;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 12px;
             overflow: hidden;
         }
 
-        /* 
-           STAGE ARCHITECTURE:
-           Hugs the rendered photo dimensions exactly, eliminating empty letterbox bar offsets.
-        */
-        .image-stage {
-            position: relative;
-            display: inline-block;
-            max-width: 100%;
-            max-height: 100%;
-            line-height: 0; /* Prevents inline bottom gap */
-        }
-
-        .stage-img {
-            max-width: 100%;
-            max-height: 100%;
-            display: block;
+        #menu-preview-img {
+            width: 100%;
+            height: 100%;
             object-fit: contain;
+            display: block;
         }
 
-        /* Direct Relative Time Layer */
-        .dynamic-time {
+        /* Identical Relative Coordinate Overlays */
+        #preview-time-overlay {
             position: absolute;
             transform-origin: center center;
             white-space: nowrap;
@@ -75,8 +62,21 @@
             font-weight: 600;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: #fff;
-            z-index: 10;
             line-height: 1;
+            z-index: 10;
+            display: none;
+        }
+
+        #performance-time-overlay {
+            position: absolute;
+            transform-origin: center center;
+            white-space: nowrap;
+            pointer-events: none;
+            font-weight: 600;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+            line-height: 1;
+            z-index: 6000;
             display: none;
         }
     </style>
@@ -97,15 +97,13 @@
 
 <!-- Full Screen Performance View -->
 <div id="fullscreen-view" onclick="closeFullscreen()">
-    <div class="image-stage" id="performance-stage">
-        <img id="viewed-image" class="stage-img" src="" alt="">
-        <div id="performance-time-overlay" class="dynamic-time">00:00</div>
-    </div>
+    <img id="viewed-image" src="" alt="">
+    <div id="performance-time-overlay">00:00</div>
 </div>
 
 <!-- Hidden Configuration Deck -->
 <div id="hidden-menu">
-    <div class="menu-title">2. FINE-TUNE ALIGNMENT AXES</div>
+    <div class="menu-title">FINE-TUNE ALIGNMENT AXES</div>
 
     <div class="control-group">
         <label>Horizontal Position (X): <span id="label-x">58%</span></label>
@@ -116,21 +114,19 @@
         <input type="range" id="slider-y" min="0" max="100" value="73">
     </div>
     <div class="control-group">
-        <label>Font Size: <span id="label-size">24px</span></label>
-        <input type="range" id="slider-size" min="8" max="60" value="24">
+        <label>Font Size: <span id="label-size">14px</span></label>
+        <input type="range" id="slider-size" min="6" max="40" value="14">
     </div>
     <div class="control-group">
         <label>Rotation Angle: <span id="label-rot">-1°</span></label>
         <input type="range" id="slider-rot" min="-180" max="180" value="-1">
     </div>
 
-    <div class="menu-title" style="margin-top: 15px; margin-bottom: 8px;">ALIGNMENT CANVAS PREVIEW</div>
+    <div class="menu-title" style="margin-top: 10px; margin-bottom: 8px;">ALIGNMENT CANVAS PREVIEW</div>
     
-    <div class="preview-outer">
-        <div class="image-stage" id="preview-stage">
-            <img id="menu-preview-img" class="stage-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>">
-            <div id="preview-time-overlay" class="dynamic-time">00:00</div>
-        </div>
+    <div class="preview-outer" id="preview-box">
+        <img id="menu-preview-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>">
+        <div id="preview-time-overlay">00:00</div>
     </div>
 
     <div class="control-group">
@@ -147,15 +143,14 @@
 </div>
 
 <script>
-    // Configuration Model
-    let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 24, rot: -1 };
+    let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 14, rot: -1 };
     let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
     let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];
     let enteredCode = "";
     let targetPerformanceTime = "00:00";
-    let gimmickedIndexInGallery = 7; // Position 8 in 4-column layout
+    let gimmickedIndexInGallery = 7;
 
-    // Two-Finger Slide Down Detection
+    // Two-Finger Slide Down
     let touchStartY = 0;
     document.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -210,7 +205,7 @@
 
     function openHiddenMenu() {
         document.getElementById('hidden-menu').style.display = 'block';
-        setTimeout(() => renderOverlay(true), 50);
+        setTimeout(() => renderOverlay(true), 60);
     }
 
     function closeHiddenMenu() {
@@ -218,72 +213,54 @@
         document.getElementById('preview-time-overlay').style.display = 'none';
     }
 
-    In the script section, find line 166:
-/* Core Stage Alignment Logic */
-function renderOverlay(isMenuPreview = false) {
-    const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
-    const stage = isMenuPreview ? document.getElementById('preview-stage') : document.getElementById('performance-stage');
-    const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
+    /* 
+       True Coordinate Calculation Engine
+       Calculates positions based solely on container layout, completely immune to menu scrolling.
+    */
+    function renderOverlay(isMenuPreview = false) {
+        const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
+        const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
+        const container = isMenuPreview ? document.getElementById('preview-box') : document.getElementById('fullscreen-view');
 
-    if (!img || !img.complete || img.naturalWidth === 0) {
-        overlay.style.display = 'none';
-        return;
+        if (!img || !img.complete || img.naturalWidth === 0) {
+            overlay.style.display = 'none';
+            return;
+        }
+
+        const boxW = container.clientWidth;
+        const boxH = container.clientHeight;
+
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const boxRatio = boxW / boxH;
+
+        let renderW, renderH, offsetX, offsetY;
+
+        if (boxRatio > imgRatio) {
+            renderH = boxH;
+            renderW = boxH * imgRatio;
+            offsetX = (boxW - renderW) / 2;
+            offsetY = 0;
+        } else {
+            renderW = boxW;
+            renderH = boxW / imgRatio;
+            offsetX = 0;
+            offsetY = (boxH - renderH) / 2;
+        }
+
+        const targetX = offsetX + (renderW * (appConfig.x / 100));
+        const targetY = offsetY + (renderH * (appConfig.y / 100));
+
+        // Auto-scale font proportionally based on preview width (170px)
+        const scaleFactor = renderW / 170;
+        const dynamicFontSize = Math.max(8, Math.round(appConfig.size * scaleFactor));
+
+        overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
+        overlay.style.left = `${Math.round(targetX)}px`;
+        overlay.style.top = `${Math.round(targetY)}px`;
+        overlay.style.fontSize = `${dynamicFontSize}px`;
+        overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
+        overlay.style.display = 'block';
     }
-
-    // Scale font proportional to stage width (preview stage width reference = 180px)
-    const stageWidth = stage.clientWidth || 180;
-    const dynamicFontSize = Math.max(8, Math.round(appConfig.size * (stageWidth / 180)));
-
-    overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
-    overlay.style.left = `${appConfig.x}%`;
-    overlay.style.top = `${appConfig.y}%`;
-    overlay.style.fontSize = `${dynamicFontSize}px`;
-    overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-    overlay.style.display = 'block';
-}
-
-Replace lines 166 through 186 with:
-/* Core Stage Alignment Logic */
-function renderOverlay(isMenuPreview = false) {
-    const overlay = isMenuPreview ? document.getElementById('preview-time-overlay') : document.getElementById('performance-time-overlay');
-    const img = isMenuPreview ? document.getElementById('menu-preview-img') : document.getElementById('viewed-image');
-
-    if (!img || !img.complete || img.naturalWidth === 0) {
-        overlay.style.display = 'none';
-        return;
-    }
-
-    const rect = img.getBoundingClientRect();
-    const imgRatio = img.naturalWidth / img.naturalHeight;
-    const elemRatio = rect.width / rect.height;
-
-    let renderW = rect.width;
-    let renderH = rect.height;
-    let renderLeft = rect.left;
-    let renderTop = rect.top;
-
-    if (elemRatio > imgRatio) {
-        renderW = rect.height * imgRatio;
-        renderLeft += (rect.width - renderW) / 2;
-    } else {
-        renderH = rect.width / imgRatio;
-        renderTop += (rect.height - renderH) / 2;
-    }
-
-    const targetX = renderLeft + (renderW * (appConfig.x / 100));
-    const targetY = renderTop + (renderH * (appConfig.y / 100));
-    const dynamicFontSize = Math.max(10, Math.round(appConfig.size * (renderW / 240)));
-
-    overlay.innerText = isMenuPreview ? "00:00" : targetPerformanceTime;
-    overlay.style.position = 'fixed';
-    overlay.style.left = `${Math.round(targetX)}px`;
-    overlay.style.top = `${Math.round(targetY)}px`;
-    overlay.style.fontSize = `${dynamicFontSize}px`;
-    overlay.style.transform = `translate(-50%, -50%) rotate(${appConfig.rot}deg)`;
-    overlay.style.display = 'block';
-}
-
-
 
     function saveConfiguration() {
         localStorage.setItem('mj_config', JSON.stringify(appConfig));
@@ -346,7 +323,7 @@ function renderOverlay(isMenuPreview = false) {
 
         if (isGimmick) {
             img.src = gimmickBase64;
-            view.style.display = 'flex';
+            view.style.display = 'block';
 
             img.onload = function() {
                 renderOverlay(false);
@@ -358,7 +335,7 @@ function renderOverlay(isMenuPreview = false) {
             }
         } else {
             img.src = imgSrc;
-            view.style.display = 'flex';
+            view.style.display = 'block';
             overlay.style.display = 'none';
         }
     }
@@ -369,7 +346,7 @@ function renderOverlay(isMenuPreview = false) {
     }
 
     window.addEventListener('resize', () => {
-        if (document.getElementById('fullscreen-view').style.display === 'flex') {
+        if (document.getElementById('fullscreen-view').style.display === 'block') {
             renderOverlay(false);
         } else if (document.getElementById('hidden-menu').style.display === 'block') {
             renderOverlay(true);

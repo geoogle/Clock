@@ -10,9 +10,9 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23111'/><circle cx='256' cy='256' r='180' fill='%23ff9500'/><path d='M256 120v136l90 54' stroke='%23fff' stroke-width='32' stroke-linecap='round' fill='none'/></svg>",
+      "src": "/Clock/app-icon.png",
       "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

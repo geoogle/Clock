@@ -18,6 +18,56 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html { width: 100%; height: 100%; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
 
+        /* Activation Screen (First Install Only) */
+        #activation-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 24px;
+            color: #fff;
+            text-align: center;
+        }
+        .act-icon { width: 64px; height: 64px; margin-bottom: 24px; border-radius: 16px; }
+        .act-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+        .act-desc { font-size: 13px; color: #8e8e93; margin-bottom: 28px; line-height: 1.4; max-width: 280px; }
+        .act-input {
+            width: 100%;
+            max-width: 300px;
+            background: #1c1c1e;
+            border: 1px solid #38383a;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 16px;
+            color: #fff;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+        .act-btn {
+            width: 100%;
+            max-width: 300px;
+            background: #007aff;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .act-btn:disabled { opacity: 0.5; }
+        .act-status { font-size: 13px; margin-top: 14px; min-height: 18px; color: #ff3b30; }
+
         /* Lock Screen */
         #lock-screen { position: fixed; width: 100%; height: 100%; background: #111; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
         .passcode-dots { display: flex; gap: 15px; margin-bottom: 30px; }
@@ -170,7 +220,6 @@
             object-fit: contain;
         }
 
-        /* Direct Relative Time Layer */
         .dynamic-time {
             position: absolute;
             transform-origin: center center;
@@ -202,6 +251,16 @@
 </head>
 <body>
 
+<!-- Activation Screen (One-Time Lock) -->
+<div id="activation-screen" style="display: none;">
+    <img src="/Clock/app-icon.png" class="act-icon" alt="App">
+    <div class="act-title">Device Activation</div>
+    <div class="act-desc">Please enter the unique activation key provided by the developer to link this device.</div>
+    <input type="text" id="activation-key-input" class="act-input" placeholder="ENTER KEY" maxlength="30" autocapitalize="characters">
+    <button id="activate-submit-btn" class="act-btn" onclick="submitActivation()">Activate Device</button>
+    <div id="activation-status" class="act-status"></div>
+</div>
+
 <!-- Passcode Lock Screen -->
 <div id="lock-screen">
     <div style="font-size: 18px; margin-bottom: 40px; font-weight: 300;">Enter Passcode</div>
@@ -219,7 +278,6 @@
 
 <!-- Full Screen Performance View -->
 <div id="fullscreen-view" onclick="toggleViewerChrome()">
-    <!-- Top Native Gallery Chrome -->
     <div class="viewer-bar top" id="viewer-chrome-top">
         <div class="viewer-btn" onclick="event.stopPropagation(); closeFullscreen();">
             <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -236,7 +294,6 @@
         <div id="performance-time-overlay" class="dynamic-time">00:00</div>
     </div>
 
-    <!-- Bottom Native Gallery Chrome -->
     <div class="viewer-bar bottom" id="viewer-chrome-bottom">
         <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('Preparing image to share...');">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
@@ -263,7 +320,6 @@
 <div id="hidden-menu">
     <div class="fancy-header">With Love Mentalist Jagath</div>
 
-    <!-- Section 1: Configure Photos -->
     <div class="config-card">
         <div class="card-title">1. Configure Photos</div>
         
@@ -280,7 +336,6 @@
         <div id="filler-status" class="upload-status" style="color: #4cd964;">0 / 25 Photos Loaded</div>
     </div>
 
-    <!-- Section 2: Fine-Tune Alignment Axes -->
     <div class="config-card">
         <div class="card-title">2. Fine-Tune Alignment Axes</div>
 
@@ -302,7 +357,6 @@
         </div>
     </div>
 
-    <!-- Section 3: Alignment Canvas Preview -->
     <div class="config-card">
         <div class="card-title">Alignment Canvas Preview</div>
         
@@ -318,6 +372,8 @@
     </div>
 </div>
 <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8tpLAojLQd4rjkDn4N9QwzgoUdDocvoD51TWCB386R8pc9bpznPld3XjqL1YEzV7N/exec";
+
     let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 24, rot: -1 };
     let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
     let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];
@@ -325,6 +381,73 @@
     let targetPerformanceTime = "00:00";
     let gimmickedIndexInGallery = 7;
     let chromeVisible = true;
+
+    // --- HARDWARE-BOUND ACTIVATION SYSTEM ---
+    function getDeviceId() {
+        let devId = localStorage.getItem('mj_device_uuid');
+        if (!devId) {
+            devId = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+            localStorage.setItem('mj_device_uuid', devId);
+        }
+        return devId;
+    }
+
+    function checkActivationState() {
+        const isActivated = localStorage.getItem('mj_app_licensed');
+        if (isActivated === 'true') {
+            document.getElementById('activation-screen').style.display = 'none';
+            document.getElementById('lock-screen').style.display = 'flex';
+        } else {
+            document.getElementById('activation-screen').style.display = 'flex';
+            document.getElementById('lock-screen').style.display = 'none';
+        }
+    }
+
+    async function submitActivation() {
+        const input = document.getElementById('activation-key-input');
+        const status = document.getElementById('activation-status');
+        const btn = document.getElementById('activate-submit-btn');
+        const key = input.value.trim().toUpperCase();
+
+        if (!key) {
+            status.style.color = "#ff3b30";
+            status.innerText = "Please enter an activation key.";
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Verifying...";
+        status.style.color = "#8e8e93";
+        status.innerText = "Connecting to license server...";
+
+        const devId = getDeviceId();
+        const requestUrl = `${SCRIPT_URL}?key=${encodeURIComponent(key)}&device=${encodeURIComponent(devId)}`;
+
+        try {
+            const res = await fetch(requestUrl);
+            const data = await res.json();
+
+            if (data.success) {
+                status.style.color = "#34c759";
+                status.innerText = data.msg || "Device Activated!";
+                localStorage.setItem('mj_app_licensed', 'true');
+                setTimeout(() => {
+                    document.getElementById('activation-screen').style.display = 'none';
+                    document.getElementById('lock-screen').style.display = 'flex';
+                }, 1000);
+            } else {
+                status.style.color = "#ff3b30";
+                status.innerText = data.msg || "Activation failed.";
+                btn.disabled = false;
+                btn.innerText = "Activate Device";
+            }
+        } catch (err) {
+            status.style.color = "#ff3b30";
+            status.innerText = "Connection error. Internet required for first activation.";
+            btn.disabled = false;
+            btn.innerText = "Activate Device";
+        }
+    }
 
     // Two-Finger Slide Down
     let touchStartY = 0;
@@ -344,6 +467,7 @@
     });
 
     window.onload = function() {
+        checkActivationState();
         buildKeypad();
         initSliders();
         if (gimmickBase64) {
@@ -571,7 +695,6 @@
         }
     });
 
-    /* Client-Side Bulk Photo Compression Engine */
     document.getElementById('filler-input').addEventListener('change', async function(e) {
         const files = Array.from(e.target.files).slice(0, 25);
         if (files.length === 0) return;
@@ -629,7 +752,6 @@
         }
     });
 
-    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/Clock/sw.js', { scope: '/Clock/' })

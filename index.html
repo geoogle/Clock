@@ -7,9 +7,11 @@
     
     <!-- PWA Setup Headers -->
     <link rel="manifest" href="/Clock/manifest.json">
-<meta name="theme-color" content="#000000">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/png" href="/Clock/app-icon.png">
+    <link rel="apple-touch-icon" href="/Clock/app-icon.png">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
@@ -22,7 +24,10 @@
         .dot { width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; }
         .dot.filled { background: white; }
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .key { width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+        .key { width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; transition: background 0.1s; }
+        .key:active { background: rgba(255,255,255,0.3); }
+        .key-action { font-size: 16px; font-weight: 500; background: transparent; }
+        .forgot-link { margin-top: 30px; color: #8e8e93; font-size: 14px; cursor: pointer; }
 
         /* Gallery Grid */
         #gallery-screen { display: none; width: 100%; height: 100%; background: #000; padding: 2px; overflow-y: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; align-content: start; }
@@ -31,23 +36,66 @@
         /* Fullscreen View Container */
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; align-items: center; justify-content: center; }
 
+        /* Gallery Overlay Chrome UI (Trust Factor) */
+        .viewer-bar {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            z-index: 7000;
+            color: #fff;
+            transition: opacity 0.25s ease;
+        }
+        .viewer-bar.top { top: 0; }
+        .viewer-bar.bottom {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 20%, transparent);
+            justify-content: space-around;
+            padding: 16px 10px 26px 10px;
+        }
+        .viewer-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #fff;
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        .viewer-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .ai-pill {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         /* Hidden Menu Styling */
         #hidden-menu { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 99999; color: #fff; padding: 18px; overflow-y: auto; }
         
-        /* Your Custom Header Styling */
         .fancy-header { 
             font-family: 'Georgia', serif; 
             font-style: italic; 
             text-align: center; 
             font-size: 26px; 
-            color: #d4af37; /* Gold */
+            color: #d4af37;
             margin-top: 10px;
             margin-bottom: 20px;
             letter-spacing: 0.5px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.6);
         }
 
-        /* Menu Card Sections */
         .config-card {
             background: #1c1c1e;
             border-radius: 12px;
@@ -65,7 +113,6 @@
             margin-bottom: 12px;
         }
 
-        /* Upload Custom Buttons */
         .custom-file-btn {
             display: flex;
             align-items: center;
@@ -91,12 +138,10 @@
             font-weight: 500;
         }
 
-        /* Slider Controls */
         .control-group { margin-bottom: 14px; }
         .control-group label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #ccc; }
         .control-group input[type="range"] { width: 100%; accent-color: #007aff; }
 
-        /* Preview Outer Box */
         .preview-outer {
             width: 100%;
             height: 300px;
@@ -125,7 +170,7 @@
             object-fit: contain;
         }
 
-        /* Direct Relative Time Layer */
+        /* Direct Relative Time Layer (Unchanged Math) */
         .dynamic-time {
             position: absolute;
             transform-origin: center center;
@@ -163,24 +208,59 @@
     <div class="passcode-dots">
         <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div>
     </div>
+    
     <div class="keypad" id="keypad"></div>
+
+    <div class="forgot-link" onclick="handleForgotPasscode()">Forgot Passcode?</div>
 </div>
 
 <!-- Gallery Grid -->
 <div id="gallery-screen"></div>
 
 <!-- Full Screen Performance View -->
-<div id="fullscreen-view" onclick="closeFullscreen()">
+<div id="fullscreen-view" onclick="toggleViewerChrome()">
+    <!-- Top Native Gallery Chrome -->
+    <div class="viewer-bar top" id="viewer-chrome-top">
+        <div class="viewer-btn" onclick="event.stopPropagation(); closeFullscreen();">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </div>
+        <div style="font-size: 14px; font-weight: 500;">Details</div>
+        <div style="display:flex; gap:16px;">
+            <div class="viewer-btn"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
+            <div class="viewer-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></div>
+        </div>
+    </div>
+
     <div class="image-stage" id="performance-stage">
         <img id="viewed-image" class="stage-img" src="" alt="">
         <div id="performance-time-overlay" class="dynamic-time">00:00</div>
+    </div>
+
+    <!-- Bottom Native Gallery Chrome (Trust Factor) -->
+    <div class="viewer-bar bottom" id="viewer-chrome-bottom">
+        <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('Preparing image to share...');">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <span>Share</span>
+        </div>
+
+        <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('Loading photo editor...');">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            <span>Edit</span>
+        </div>
+
+        <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('AI Object Eraser & Enhance ready');">
+            <div class="ai-pill">✨ AI Edit</div>
+        </div>
+
+        <div class="viewer-btn" onclick="event.stopPropagation(); fakeToast('Cannot delete protected item.');">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>Delete</span>
+        </div>
     </div>
 </div>
 
 <!-- Hidden Configuration Deck -->
 <div id="hidden-menu">
-    
-    <!-- Credits Header -->
     <div class="fancy-header">With Love Mentalist Jagath</div>
 
     <!-- Section 1: Configure Photos -->
@@ -200,7 +280,7 @@
         <div id="filler-status" class="upload-status" style="color: #4cd964;">0 / 25 Photos Loaded</div>
     </div>
 
-    <!-- Section 2: Fine-Tune Alignment Axes -->
+    <!-- Section 2: Fine-Tune Alignment Axes (Untouched) -->
     <div class="config-card">
         <div class="card-title">2. Fine-Tune Alignment Axes</div>
 
@@ -239,15 +319,15 @@
 </div>
 
 <script>
-    // Configuration Model
     let appConfig = JSON.parse(localStorage.getItem('mj_config')) || { x: 58, y: 73, size: 24, rot: -1 };
     let gimmickBase64 = localStorage.getItem('mj_gimmick') || "";
     let fillerImagesArray = JSON.parse(localStorage.getItem('mj_fillers')) || [];
     let enteredCode = "";
     let targetPerformanceTime = "00:00";
     let gimmickedIndexInGallery = 7;
+    let chromeVisible = true;
 
-    // Two-Finger Slide Down Detection
+    // Two-Finger Slide Down
     let touchStartY = 0;
     document.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -269,7 +349,8 @@
         initSliders();
         if (gimmickBase64) {
             document.getElementById('menu-preview-img').src = gimmickBase64;
-            document.getElementById('gimmick-status').innerText = "Target Gimmick Saved Permanently";
+            document.getElementById('gimmick-status').innerText = "Target Gimmick Ready";
+            document.getElementById('gimmick-status').style.color = "#4cd964";
         } else {
             document.getElementById('gimmick-status').innerText = "No image loaded";
             document.getElementById('gimmick-status').style.color = "#ff3b30";
@@ -280,6 +361,117 @@
         }
     };
 
+    function buildKeypad() {
+        const container = document.getElementById('keypad');
+        container.innerHTML = "";
+        for (let i = 1; i <= 9; i++) {
+            container.innerHTML += `<div class="key" onclick="pressKey('${i}')">${i}</div>`;
+        }
+        // Blank space for balance
+        container.innerHTML += `<div class="key key-action"></div>`;
+        // Zero
+        container.innerHTML += `<div class="key" onclick="pressKey('0')">0</div>`;
+        // Backspace Delete Button
+        container.innerHTML += `<div class="key key-action" onclick="deleteDigit()">⌫</div>`;
+    }
+
+    function pressKey(num) {
+        if (enteredCode.length < 4) {
+            enteredCode += num;
+            document.getElementById(`d${enteredCode.length}`).classList.add('filled');
+        }
+        if (enteredCode.length === 4) {
+            setTimeout(processUnlockSequence, 180);
+        }
+    }
+
+    function deleteDigit() {
+        if (enteredCode.length > 0) {
+            document.getElementById(`d${enteredCode.length}`).classList.remove('filled');
+            enteredCode = enteredCode.slice(0, -1);
+        }
+    }
+
+    function handleForgotPasscode() {
+        alert("Passcode recovery is currently disabled for security. Please contact your device administrator.");
+    }
+
+    function processUnlockSequence() {
+        let hr = enteredCode.substring(0, 2);
+        let min = enteredCode.substring(2, 4);
+        targetPerformanceTime = `${hr}:${min}`;
+
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('gallery-screen').style.display = 'grid';
+        generateGalleryGrid();
+    }
+
+    function generateGalleryGrid() {
+        const grid = document.getElementById('gallery-screen');
+        grid.innerHTML = "";
+
+        let totalSlotsCount = Math.max(25, fillerImagesArray.length + 1);
+        let fillerPointer = 0;
+
+        for (let i = 0; i < totalSlotsCount; i++) {
+            if (i === gimmickedIndexInGallery) {
+                let srcImg = gimmickBase64 || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23555'/></svg>";
+                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(true)">`;
+            } else {
+                let srcImg = fillerImagesArray[fillerPointer] || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>";
+                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(false, '${srcImg}')">`;
+                if (fillerImagesArray[fillerPointer]) fillerPointer++;
+            }
+        }
+    }
+
+    function openFullscreen(isGimmick, imgSrc = "") {
+        const view = document.getElementById('fullscreen-view');
+        const img = document.getElementById('viewed-image');
+        const overlay = document.getElementById('performance-time-overlay');
+
+        // Reset Chrome Bar Visibility
+        chromeVisible = true;
+        document.getElementById('viewer-chrome-top').style.opacity = '1';
+        document.getElementById('viewer-chrome-bottom').style.opacity = '1';
+
+        if (isGimmick) {
+            img.src = gimmickBase64;
+            view.style.display = 'flex';
+
+            img.onload = function() {
+                renderOverlay(false);
+                setTimeout(() => renderOverlay(false), 50);
+            };
+            if (img.complete) {
+                renderOverlay(false);
+                setTimeout(() => renderOverlay(false), 50);
+            }
+        } else {
+            img.src = imgSrc;
+            view.style.display = 'flex';
+            overlay.style.display = 'none';
+        }
+    }
+
+    function closeFullscreen() {
+        document.getElementById('fullscreen-view').style.display = 'none';
+        document.getElementById('performance-time-overlay').style.display = 'none';
+    }
+
+    function toggleViewerChrome() {
+        chromeVisible = !chromeVisible;
+        const opacityVal = chromeVisible ? '1' : '0';
+        document.getElementById('viewer-chrome-top').style.opacity = opacityVal;
+        document.getElementById('viewer-chrome-bottom').style.opacity = opacityVal;
+    }
+
+    function fakeToast(msg) {
+        // Discreely satisfies curiosity without breaking character
+        console.log(msg);
+    }
+
+    /* Unchanged Alignment Engine */
     function initSliders() {
         document.getElementById('slider-x').value = appConfig.x;
         document.getElementById('slider-y').value = appConfig.y;
@@ -362,84 +554,6 @@
         alert("Settings Saved Successfully!");
     }
 
-    function buildKeypad() {
-        const container = document.getElementById('keypad');
-        container.innerHTML = "";
-        for (let i = 1; i <= 9; i++) {
-            container.innerHTML += `<div class="key" onclick="pressKey('${i}')">${i}</div>`;
-        }
-        container.innerHTML += `<div class="key" style="background:transparent;"></div>`;
-        container.innerHTML += `<div class="key" onclick="pressKey('0')">0</div>`;
-    }
-
-    function pressKey(num) {
-        if (enteredCode.length < 4) {
-            enteredCode += num;
-            document.getElementById(`d${enteredCode.length}`).classList.add('filled');
-        }
-        if (enteredCode.length === 4) {
-            setTimeout(processUnlockSequence, 180);
-        }
-    }
-
-    function processUnlockSequence() {
-        let hr = enteredCode.substring(0, 2);
-        let min = enteredCode.substring(2, 4);
-        targetPerformanceTime = `${hr}:${min}`;
-
-        document.getElementById('lock-screen').style.display = 'none';
-        document.getElementById('gallery-screen').style.display = 'grid';
-        generateGalleryGrid();
-    }
-
-    function generateGalleryGrid() {
-        const grid = document.getElementById('gallery-screen');
-        grid.innerHTML = "";
-
-        let totalSlotsCount = Math.max(25, fillerImagesArray.length + 1);
-        let fillerPointer = 0;
-
-        for (let i = 0; i < totalSlotsCount; i++) {
-            if (i === gimmickedIndexInGallery) {
-                let srcImg = gimmickBase64 || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23555'/></svg>";
-                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(true)">`;
-            } else {
-                let srcImg = fillerImagesArray[fillerPointer] || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23222'/></svg>";
-                grid.innerHTML += `<img class="thumbnail" src="${srcImg}" onclick="openFullscreen(false, '${srcImg}')">`;
-                if (fillerImagesArray[fillerPointer]) fillerPointer++;
-            }
-        }
-    }
-
-    function openFullscreen(isGimmick, imgSrc = "") {
-        const view = document.getElementById('fullscreen-view');
-        const img = document.getElementById('viewed-image');
-        const overlay = document.getElementById('performance-time-overlay');
-
-        if (isGimmick) {
-            img.src = gimmickBase64;
-            view.style.display = 'flex';
-
-            img.onload = function() {
-                renderOverlay(false);
-                setTimeout(() => renderOverlay(false), 50);
-            };
-            if (img.complete) {
-                renderOverlay(false);
-                setTimeout(() => renderOverlay(false), 50);
-            }
-        } else {
-            img.src = imgSrc;
-            view.style.display = 'flex';
-            overlay.style.display = 'none';
-        }
-    }
-
-    function closeFullscreen() {
-        document.getElementById('fullscreen-view').style.display = 'none';
-        document.getElementById('performance-time-overlay').style.display = 'none';
-    }
-
     window.addEventListener('resize', () => {
         if (document.getElementById('fullscreen-view').style.display === 'flex') {
             renderOverlay(false);
@@ -456,7 +570,7 @@
                 gimmickBase64 = event.target.result;
                 localStorage.setItem('mj_gimmick', gimmickBase64);
                 document.getElementById('menu-preview-img').src = gimmickBase64;
-                document.getElementById('gimmick-status').innerText = "Target Gimmick Saved Permanently";
+                document.getElementById('gimmick-status').innerText = "Target Gimmick Ready";
                 document.getElementById('gimmick-status').style.color = "#4cd964";
                 setTimeout(() => renderOverlay(true), 100);
             };
@@ -484,7 +598,7 @@
         });
     });
 
-        // PWA Service Worker Registration
+    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/Clock/sw.js', { scope: '/Clock/' })
